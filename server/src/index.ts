@@ -18,8 +18,23 @@ async function bootstrap() {
   const server = http.createServer(app);
 
   // Security & Parsing Middleware
-  // Disable CSP header in helmet to let Next.js hydrate and display blob media without script blocking
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://static.cloudflareinsights.com'],
+          scriptSrcElem: ["'self'", "'unsafe-inline'", 'https://static.cloudflareinsights.com'],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+          imgSrc: ["'self'", 'data:', 'blob:', 'https:', '*'],
+          mediaSrc: ["'self'", 'data:', 'blob:', 'https:', '*'],
+          connectSrc: ["'self'", 'https:', 'wss:', 'ws:', '*'],
+        },
+      },
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    })
+  );
   // Configure matched CORS origins for Express and Socket.IO
   const rawCorsOrigin = process.env.CORS_ORIGIN || config.corsOrigin || '*';
   let corsOriginSetting: boolean | string | string[] | ((origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void);

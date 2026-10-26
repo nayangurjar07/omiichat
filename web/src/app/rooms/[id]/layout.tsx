@@ -6,6 +6,10 @@ export const metadata: Metadata = {
   description: siteConfig.description,
 };
 
+export function generateStaticParams() {
+  return [{ id: 'gaming' }];
+}
+
 export default function RoomChatLayout({
   children,
 }: {
