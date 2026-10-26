@@ -25,14 +25,7 @@ async function bootstrap() {
   let corsOriginSetting: boolean | string | string[] | ((origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void);
 
   if (!rawCorsOrigin || rawCorsOrigin === '*' || rawCorsOrigin === 'true') {
-    corsOriginSetting = (origin, callback) => {
-      if (!origin) return callback(null, true);
-      const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
-      if (isLocal || process.env.NODE_ENV !== 'production') {
-        return callback(null, true);
-      }
-      return callback(new Error('Blocked by CORS policy'));
-    };
+    corsOriginSetting = (_origin, callback) => callback(null, true);
   } else if (rawCorsOrigin.includes(',')) {
     corsOriginSetting = rawCorsOrigin.split(',').map((o) => o.trim()).filter(Boolean);
   } else {
