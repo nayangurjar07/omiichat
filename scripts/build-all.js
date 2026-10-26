@@ -8,8 +8,10 @@ const serverDir = path.join(rootDir, 'server');
 const webOut = path.join(webDir, 'out');
 const serverPublic = path.join(serverDir, 'public');
 
+const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+
 console.log('1. Building Next.js Web Application...');
-execSync('npm run build', { cwd: webDir, stdio: 'inherit' });
+execSync(`${npmCmd} run build`, { cwd: webDir, stdio: 'inherit' });
 
 console.log('2. Syncing built web assets to server/public...');
 if (fs.existsSync(webOut)) {
@@ -23,6 +25,6 @@ if (fs.existsSync(webOut)) {
 }
 
 console.log('3. Building Express & Socket.IO Backend Server...');
-execSync('npm run build', { cwd: serverDir, stdio: 'inherit' });
+execSync(`${npmCmd} run build`, { cwd: serverDir, stdio: 'inherit' });
 
 console.log('Build complete! Ready for deployment.');

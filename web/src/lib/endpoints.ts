@@ -4,14 +4,19 @@
  */
 
 function computeApiBase(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '');
-  }
-
   if (typeof window !== 'undefined') {
     const { protocol, hostname, port } = window.location;
+    // Explicit override via env ONLY if not localhost
+    if (
+      process.env.NEXT_PUBLIC_API_URL &&
+      !process.env.NEXT_PUBLIC_API_URL.includes('localhost') &&
+      !process.env.NEXT_PUBLIC_API_URL.includes('127.0.0.1')
+    ) {
+      return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '');
+    }
+
     // Local development mode: frontend on :3000, backend on :3001
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    if ((hostname === 'localhost' || hostname === '127.0.0.1') && port === '3000') {
       return `${protocol}//${hostname}:3001`;
     }
     // LAN IP access (e.g. 192.168.x.x:3000 in local dev)
@@ -22,41 +27,46 @@ function computeApiBase(): string {
     return window.location.origin;
   }
 
-  return 'http://localhost:3001';
+  return '';
 }
 
 function computeSocketUrl(): string {
-  if (process.env.NEXT_PUBLIC_SOCKET_URL) {
-    return process.env.NEXT_PUBLIC_SOCKET_URL.replace(/\/$/, '');
-  }
-
   if (typeof window !== 'undefined') {
     const { protocol, hostname, port } = window.location;
+    // Explicit override via env ONLY if not localhost
+    if (
+      process.env.NEXT_PUBLIC_SOCKET_URL &&
+      !process.env.NEXT_PUBLIC_SOCKET_URL.includes('localhost') &&
+      !process.env.NEXT_PUBLIC_SOCKET_URL.includes('127.0.0.1')
+    ) {
+      return process.env.NEXT_PUBLIC_SOCKET_URL.replace(/\/$/, '');
+    }
+
     // Local development mode
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    if ((hostname === 'localhost' || hostname === '127.0.0.1') && port === '3000') {
       return `${protocol}//${hostname}:3001`;
     }
     // LAN IP access in local dev
     if (port === '3000') {
       return `${protocol}//${hostname}:3001`;
     }
-    // Behind reverse proxy / production deployment on same origin
+    // Production / same origin
     return window.location.origin;
   }
 
-  return 'http://localhost:3001';
+  return '';
 }
 
-export const API_BASE = computeApiBase();
-export const SOCKET_URL = computeSocketUrl();
-
 export function getApiBase(): string {
-  return typeof window !== 'undefined' ? computeApiBase() : API_BASE;
+  return typeof window !== 'undefined' ? computeApiBase() : '';
 }
 
 export function getSocketUrl(): string {
-  return typeof window !== 'undefined' ? computeSocketUrl() : SOCKET_URL;
+  return typeof window !== 'undefined' ? computeSocketUrl() : '';
 }
+
+export const API_BASE = '';
+export const SOCKET_URL = '';
 
 /**
  * Resolves uploaded media paths (images, audio) to absolute URLs
