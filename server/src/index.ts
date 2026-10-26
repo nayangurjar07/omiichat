@@ -104,12 +104,38 @@ async function bootstrap() {
   // Serve built static web application if public/ exists
   const publicDir = path.resolve(__dirname, '../public');
   if (fs.existsSync(publicDir)) {
-    app.use(express.static(publicDir));
+    app.use(
+      express.static(publicDir, {
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+          }
+        },
+      })
+    );
+
     app.get('*', (req, res) => {
+      // Don't serve HTML fallback for missing static assets or API routes
+      if (
+        req.path.startsWith('/_next/') ||
+        req.path.startsWith('/api/') ||
+        req.path.startsWith('/uploads/') ||
+        req.path.startsWith('/socket.io/') ||
+        path.extname(req.path) !== ''
+      ) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+
       const cleanPath = req.path.replace(/^\//, '').replace(/\/$/, '');
       const directHtml = path.join(publicDir, `${cleanPath}.html`);
       const nestedHtml = path.join(publicDir, cleanPath, 'index.html');
       const fallbackHtml = path.join(publicDir, 'index.html');
+
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
 
       if (cleanPath && fs.existsSync(directHtml)) {
         return res.sendFile(directHtml);
