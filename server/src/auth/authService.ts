@@ -140,33 +140,68 @@ export async function loginWithEmail(email: string, password: string) {
  */
 export async function authenticateGoogle(params: {
   googleId: string;
+  credential?: string;
   email: string;
   nickname: string;
   avatar?: string;
 }) {
-  const cleanEmail = params.email.trim().toLowerCase();
+  let verifiedEmail = params.email.trim().toLowerCase();
+  let verifiedGoogleId = params.googleId;
+
+  // If a Google ID token credential was provided, verify it with Google's API
+  if (params.credential) {
+    try {
+      const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(params.credential)}`);
+      if (res.ok) {
+        const payload = (await res.json()) as { email?: string; sub?: string; email_verified?: string | boolean };
+        if (payload.email && (payload.email_verified === 'true' || payload.email_verified === true)) {
+          verifiedEmail = payload.email.toLowerCase();
+          verifiedGoogleId = payload.sub || params.googleId;
+        } else {
+          throw new Error('Google email is not verified.');
+        }
+      } else {
+        throw new Error('Invalid Google credential token.');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Google credential verification failed';
+      logger.error('Google token verification error:', err);
+      throw new Error(msg);
+    }
+  } else if (process.env.NODE_ENV === 'production') {
+    // In production, reject unverified Google sign-in attempts
+    throw new Error('Google ID token is required for authentication.');
+  }
+
   const cleanNick = sanitizeNickname(params.nickname);
 
-  let user = await prisma.user.findFirst({
-    where: {
-      OR: [{ googleId: params.googleId }, { email: cleanEmail }],
-    },
+  // In secure mode, match strictly by googleId first
+  let user = await prisma.user.findUnique({
+    where: { googleId: verifiedGoogleId },
   });
+
+  if (!user && verifiedEmail) {
+    // Only link to an existing email account if the token was cryptographically verified
+    if (params.credential) {
+      const existing = await prisma.user.findUnique({ where: { email: verifiedEmail } });
+      if (existing) {
+        user = await prisma.user.update({
+          where: { id: existing.id },
+          data: { googleId: verifiedGoogleId },
+        });
+      }
+    }
+  }
 
   if (!user) {
     user = await prisma.user.create({
       data: {
-        googleId: params.googleId,
-        email: cleanEmail,
+        googleId: verifiedGoogleId,
+        email: verifiedEmail || null,
         nickname: cleanNick,
         avatar: params.avatar || 'avatar_google',
         interests: JSON.stringify(['Tech', 'Gaming']),
       },
-    });
-  } else if (!user.googleId) {
-    user = await prisma.user.update({
-      where: { id: user.id },
-      data: { googleId: params.googleId },
     });
   }
 
@@ -244,7 +279,6 @@ export async function getFriendsList(userId: string) {
       friendshipId: f.id,
       friendId: friend.id,
       nickname: friend.nickname,
-      email: friend.email,
       avatar: friend.avatar,
       createdAt: f.createdAt,
     };

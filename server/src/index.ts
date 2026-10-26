@@ -25,7 +25,14 @@ async function bootstrap() {
   let corsOriginSetting: boolean | string | string[] | ((origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void);
 
   if (!rawCorsOrigin || rawCorsOrigin === '*' || rawCorsOrigin === 'true') {
-    corsOriginSetting = (origin, callback) => callback(null, true);
+    corsOriginSetting = (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+      if (isLocal || process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+      return callback(new Error('Blocked by CORS policy'));
+    };
   } else if (rawCorsOrigin.includes(',')) {
     corsOriginSetting = rawCorsOrigin.split(',').map((o) => o.trim()).filter(Boolean);
   } else {
@@ -50,7 +57,7 @@ async function bootstrap() {
     });
   });
 
-  // Media Static Storage Directory with CORS
+  // Media Static Storage Directory with CORS & Security Headers
   const uploadDir = storage.getUploadDir();
   app.use(
     '/uploads',
@@ -58,6 +65,8 @@ async function bootstrap() {
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
       res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
       next();
     },
     express.static(uploadDir)

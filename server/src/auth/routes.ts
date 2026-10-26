@@ -61,12 +61,12 @@ router.post('/login', async (req: Request, res: Response) => {
 /** POST /api/auth/google — Google Sign-In */
 router.post('/google', async (req: Request, res: Response) => {
   try {
-    const { googleId, email, nickname, avatar } = req.body;
+    const { googleId, email, nickname, avatar, credential } = req.body;
     if (!googleId || !email) {
       res.status(400).json({ error: 'Google ID and email are required' });
       return;
     }
-    const result = await authenticateGoogle({ googleId, email, nickname, avatar });
+    const result = await authenticateGoogle({ googleId, email, nickname, avatar, credential });
     res.json(result);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Google authentication failed';

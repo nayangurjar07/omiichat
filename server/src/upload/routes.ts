@@ -1,12 +1,12 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
-import { LocalStorageService } from '../storage/LocalStorageService';
+import { SupabaseStorageService } from '../storage/SupabaseStorageService';
 import { moderateImage } from '../storage/imageModeration';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
 const router = Router();
-const storage = new LocalStorageService();
+const storage = new SupabaseStorageService();
 
 // Multer memory storage so we can validate buffer and magic bytes before writing
 const upload = multer({

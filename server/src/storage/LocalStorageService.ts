@@ -18,8 +18,8 @@ export class LocalStorageService implements IStorageService {
     }
   }
 
-  async upload(buffer: Buffer, originalFilename: string, mimeType: string): Promise<UploadResult> {
-    const ext = path.extname(originalFilename) || this.getExtensionFromMime(mimeType);
+  async upload(buffer: Buffer, _originalFilename: string, mimeType: string): Promise<UploadResult> {
+    const ext = this.getExtensionFromMime(mimeType);
     const key = `${Date.now()}-${uuidv4().slice(0, 8)}${ext}`;
     const filePath = path.join(this.uploadDir, key);
 

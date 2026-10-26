@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
 
@@ -7,7 +8,7 @@ function generateCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let result = '';
   for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+    result += chars.charAt(crypto.randomInt(0, chars.length));
   }
   return result;
 }
@@ -80,6 +81,12 @@ export async function verifyReconnectCode(code: string, currentSid: string) {
 
   if (record.expiresAt < new Date()) {
     throw new Error('This reconnect code has expired (24 hours limit).');
+  }
+
+  // Ensure current user is one of the original participants
+  const isParticipant = record.user1Sid === currentSid || record.user2Sid === currentSid;
+  if (!isParticipant) {
+    throw new Error('Unauthorized: you were not a participant in this conversation.');
   }
 
   // Determine partner details

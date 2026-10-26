@@ -50,7 +50,7 @@ function timingSafeCompare(provided: string, expected: string): boolean {
 
 /** Admin password protection middleware */
 function requireAdmin(req: Request, res: Response, next: NextFunction): void {
-  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.ip || 'unknown';
+  const clientIp = req.ip || (req.socket?.remoteAddress) || '127.0.0.1';
 
   if (isRateLimited(clientIp)) {
     logger.warn(`Admin rate limit hit for IP: ${clientIp}`);
@@ -58,18 +58,19 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
     return;
   }
 
-  const password =
-    (req.headers['x-admin-password'] as string) ||
-    (req.query.password as string) ||
-    '';
+  const password = (req.headers['x-admin-password'] as string) || '';
 
-  const expectedPassword = (
+  const configuredPassword = (
     process.env.ADMIN_PASSWORD ||
     config.adminPassword ||
-    'admin'
+    ''
   ).trim();
 
-  if (!timingSafeCompare(password.trim(), expectedPassword)) {
+  // If running in production and no secure admin password is set, block access
+  const isProd = process.env.NODE_ENV === 'production';
+  const expectedPassword = configuredPassword || (isProd ? '' : 'admin');
+
+  if (!expectedPassword || !password || !timingSafeCompare(password.trim(), expectedPassword)) {
     recordFailedAttempt(clientIp);
     res.status(401).json({ error: 'Unauthorized: invalid password' });
     return;
