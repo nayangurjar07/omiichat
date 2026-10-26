@@ -3,7 +3,8 @@ const path = require('path');
 const os = require('os');
 const token = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.antideploy', 'config.json'))).token;
 
-fetch('https://antideploy.com/api/v1/deployments/ae3fa086-cc29-4ee3-9fcb-2eab21d44f55', {
+const taskId = process.argv[2] || 'a7b63561-02c2-4865-ac1f-ebb09c477a7c';
+fetch(`https://antideploy.com/api/v1/deployments/${taskId}`, {
   headers: { 'Authorization': 'Bearer ' + token }
 })
 .then(r => r.json())

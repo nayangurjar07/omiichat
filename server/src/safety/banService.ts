@@ -13,19 +13,24 @@ const AUTO_BAN_THRESHOLD = 3;
 
 /** Check if a session is currently banned */
 export async function isBanned(sessionId: string): Promise<boolean> {
-  const ban = await prisma.ban.findUnique({
-    where: { sessionId },
-  });
+  try {
+    const ban = await prisma.ban.findUnique({
+      where: { sessionId },
+    });
 
-  if (!ban) return false;
+    if (!ban) return false;
 
-  // If the ban has an expiry and it's passed, remove it
-  if (ban.expiresAt && ban.expiresAt < new Date()) {
-    await prisma.ban.delete({ where: { id: ban.id } });
+    // If the ban has an expiry and it's passed, remove it
+    if (ban.expiresAt && ban.expiresAt < new Date()) {
+      await prisma.ban.delete({ where: { id: ban.id } });
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    logger.error('Error checking ban status:', err);
     return false;
   }
-
-  return true;
 }
 
 /** Ban a session (upsert to handle re-banning) */

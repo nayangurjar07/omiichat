@@ -12,8 +12,12 @@ import { setupSocketHandlers } from './socket/handler';
 import adminRoutes from './admin/routes';
 import uploadRoutes, { storage } from './upload/routes';
 import authRoutes from './auth/routes';
+import { initDatabase } from './db/initDb';
 
 async function bootstrap() {
+  // Ensure database tables exist
+  await initDatabase();
+
   const app = express();
   const server = http.createServer(app);
 
