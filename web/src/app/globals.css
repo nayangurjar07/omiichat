@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+:root {
+  --font-display: var(--font-display, 'Bricolage Grotesque', sans-serif);
+  --font-body: var(--font-body, 'Hanken Grotesk', sans-serif);
+
+  /* Light Theme — Tactile Paper & Dial-tone */
+  --bg-paper: #F2F4F7;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #E3E7EE;
+  --text-ink: #12161F;
+  --text-muted: #535E6D;
+  --accent-dial: #2A5BD7;
+  --accent-dial-hover: #1E46A8;
+  --accent-dial-subtle: rgba(42, 91, 215, 0.08);
+  --accent-stranger: #F4D35E;
+  --accent-stranger-ink: #211B04;
+  --color-alert: #D64545;
+  --color-success: #1E7E50;
+  --line-switchboard: #2A5BD7;
+  --border-line: #D0D7E2;
+  --border-subtle: #E2E7EE;
+
+  --background: var(--bg-paper);
+  --foreground: var(--text-ink);
+}
+
+.dark, [data-theme="dark"] {
+  /* Dark Theme — Quiet Ink & Switchboard Blue */
+  --bg-paper: #0F131B;
+  --bg-surface: #171D28;
+  --bg-subtle: #1F2736;
+  --text-ink: #E8ECF2;
+  --text-muted: #8F9CAE;
+  --accent-dial: #4E81FF;
+  --accent-dial-hover: #6D98FF;
+  --accent-dial-subtle: rgba(78, 129, 255, 0.12);
+  --accent-stranger: #E5C158;
+  --accent-stranger-ink: #171302;
+  --color-alert: #FF5C5C;
+  --color-success: #34D399;
+  --line-switchboard: #4E81FF;
+  --border-line: #263043;
+  --border-subtle: #1F2736;
+
+  --background: var(--bg-paper);
+  --foreground: var(--text-ink);
+}
+
+body {
+  background-color: var(--bg-paper);
+  color: var(--text-ink);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+}
+
+/* Accessible focus ring */
+:focus-visible {
+  outline: 2px solid var(--accent-dial);
+  outline-offset: 2px;
+}
+
+/* Switchboard animation */
+@keyframes switchboardWave {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 28;
+  }
+}
+
+/* Minimal scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-line);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

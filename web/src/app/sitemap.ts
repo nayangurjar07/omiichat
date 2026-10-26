@@ -1,0 +1,24 @@
+import { MetadataRoute } from 'next';
+import { siteConfig } from '@/config/site';
+
+export default function sitemap(): MetadataRoute.Sitemap {
+  const routes = [
+    '',
+    '/chat',
+    '/rooms',
+    '/rules',
+    '/faq',
+    '/privacy',
+    '/terms',
+    '/contact',
+  ];
+
+  const now = new Date();
+
+  return routes.map((route) => ({
+    url: `${siteConfig.url}${route}`,
+    lastModified: now,
+    changeFrequency: route === '' || route === '/rooms' ? 'hourly' : 'weekly',
+    priority: route === '' ? 1.0 : route === '/rooms' || route === '/chat' ? 0.9 : 0.6,
+  }));
+}
