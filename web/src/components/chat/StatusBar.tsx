@@ -11,6 +11,7 @@ import {
   Sparkles,
   UserPlus,
   Check,
+  Home,
 } from 'lucide-react';
 
 interface StatusBarProps {
@@ -65,12 +66,23 @@ export function StatusBar({
 
         {/* Action Controls */}
         <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+          {/* Home Button */}
+          <button
+            type="button"
+            onClick={onLeave}
+            title="Return to home page"
+            className="min-h-[40px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] border border-[var(--border-line)] transition-all duration-200 cursor-pointer active:scale-95 shadow-xs"
+          >
+            <Home className="w-3.5 h-3.5 text-[var(--accent-dial)]" />
+            <span className="hidden sm:inline">Home</span>
+          </button>
+
           {/* Sound Toggle */}
           <button
             type="button"
             onClick={toggleSound}
             aria-label={soundEnabled ? 'Mute sound alerts' : 'Enable sound alerts'}
-            className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+            className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer active:scale-95"
           >
             {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>

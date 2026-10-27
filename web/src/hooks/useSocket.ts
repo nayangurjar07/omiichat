@@ -496,12 +496,57 @@ export function useSocket() {
     const onDisconnect = () => {
       setConnectionState('disconnected');
       setIsConnected(false);
+      // Immediately disconnect active match if socket drops
+      if (statusRef.current === 'matched') {
+        setStatus('partner_left');
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `sys_disconnected_${Date.now()}`,
+            senderId: 'system',
+            text: 'Connection lost. The conversation has ended.',
+            timestamp: Date.now(),
+            isSelf: false,
+            isSystem: true,
+          },
+        ]);
+      }
     };
 
     const onConnectError = () => {
       setConnectionState('error');
       setIsConnected(false);
     };
+
+    const handleBrowserOffline = () => {
+      setConnectionState('disconnected');
+      setIsConnected(false);
+      if (statusRef.current === 'matched') {
+        setStatus('partner_left');
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `sys_offline_${Date.now()}`,
+            senderId: 'system',
+            text: 'Your device went offline. Conversation disconnected.',
+            timestamp: Date.now(),
+            isSelf: false,
+            isSystem: true,
+          },
+        ]);
+      }
+      socket.disconnect();
+    };
+
+    const handleBrowserOnline = () => {
+      setConnectionState('connecting');
+      socket.connect();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('offline', handleBrowserOffline);
+      window.addEventListener('online', handleBrowserOnline);
+    }
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
@@ -511,6 +556,10 @@ export function useSocket() {
     socket.emit(SOCKET_EVENTS.ROOM_GET_LIST);
 
     return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('offline', handleBrowserOffline);
+        window.removeEventListener('online', handleBrowserOnline);
+      }
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('connect_error', onConnectError);

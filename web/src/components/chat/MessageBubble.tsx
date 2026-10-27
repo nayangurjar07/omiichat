@@ -63,7 +63,7 @@ export function MessageBubble({
 
   return (
     <div
-      className={`group relative flex flex-col ${
+      className={`group relative flex flex-col transition-all duration-200 ease-out animate-in fade-in-50 slide-in-from-bottom-2 ${
         isConsecutive ? 'mt-1' : 'mt-3'
       } ${isSelf ? 'items-end' : 'items-start'}`}
     >

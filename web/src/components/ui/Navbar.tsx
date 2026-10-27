@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   User as UserIcon,
+  Home,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -90,6 +91,17 @@ export function Navbar({
 
           {/* Right Navigation */}
           <div className="flex items-center gap-2">
+            {inChat && (
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] border border-[var(--border-line)] transition-all duration-200 active:scale-95 mr-1"
+                title="Return to home page"
+              >
+                <Home className="w-3.5 h-3.5 text-[var(--accent-dial)]" />
+                <span className="hidden sm:inline">Home</span>
+              </Link>
+            )}
+
             {!inChat && (
               <nav className="hidden md:flex items-center gap-5 text-xs font-medium text-[var(--text-muted)] mr-2">
                 <Link

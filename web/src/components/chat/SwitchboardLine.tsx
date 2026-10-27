@@ -89,7 +89,7 @@ export function SwitchboardLine({
         <span
           className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${
             isMatched
-              ? 'bg-[var(--accent-stranger)] shadow-[0_0_8px_var(--accent-stranger)]'
+              ? 'bg-slate-500 dark:bg-slate-300 shadow-[0_0_6px_rgba(148,163,184,0.4)]'
               : isLeft
               ? 'bg-[var(--color-alert)]'
               : 'bg-[var(--border-line)]'

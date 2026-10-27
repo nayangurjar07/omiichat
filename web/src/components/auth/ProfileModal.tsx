@@ -202,7 +202,7 @@ export function ProfileModal({
                     onClick={() => setAvatar(emoji)}
                     className={`h-11 rounded-xl text-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer ${
                       avatar === emoji
-                        ? 'bg-indigo-600 text-white ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-zinc-900 shadow-md'
+                        ? 'bg-[var(--accent-dial)] text-white ring-2 ring-[var(--accent-dial)] ring-offset-2 dark:ring-offset-zinc-900 shadow-md'
                         : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200'
                     }`}
                   >
@@ -223,7 +223,7 @@ export function ProfileModal({
                 maxLength={20}
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                className="w-full px-4 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                className="w-full px-4 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[var(--accent-dial)]/50"
               />
             </div>
 
@@ -239,7 +239,7 @@ export function ProfileModal({
                 {interests.map((t) => (
                   <span
                     key={t}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-900/60"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[var(--accent-dial-subtle)] text-[var(--accent-dial)] border border-[var(--accent-dial)]/20"
                   >
                     #{t}
                     <button
@@ -267,7 +267,7 @@ export function ProfileModal({
                     }
                   }}
                   placeholder="Add custom interest..."
-                  className="flex-1 px-3 py-1.5 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  className="flex-1 px-3 py-1.5 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[var(--accent-dial)]/50"
                 />
                 <button
                   type="button"
@@ -306,7 +306,7 @@ export function ProfileModal({
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 placeholder="Say a sentence about yourself..."
-                className="w-full px-4 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
+                className="w-full px-4 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[var(--accent-dial)]/50 resize-none"
               />
             </div>
 
@@ -369,7 +369,7 @@ export function ProfileModal({
                     className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-100/80 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700/60"
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950 text-base flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-[var(--bg-subtle)] text-base flex items-center justify-center">
                         {f.avatar || '🦊'}
                       </div>
                       <div className="space-y-0.5">

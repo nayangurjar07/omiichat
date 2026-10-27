@@ -96,8 +96,8 @@ async function bootstrap() {
       methods: ['GET', 'POST'],
       credentials: true,
     },
-    pingTimeout: 30000,
-    pingInterval: 10000,
+    pingTimeout: 5000,
+    pingInterval: 3000,
     maxHttpBufferSize: 1e7, // 10MB
   });
 

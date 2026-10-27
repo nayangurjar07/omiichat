@@ -113,6 +113,24 @@ function ChatView() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, partnerTyping]);
 
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (statusRef.current === 'matched') {
+        skip();
+      } else {
+        leaveQueue();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
+    };
+  }, [skip, leaveQueue]);
+
   const handleSkip = () => {
     skip();
     const nick = getStoredNickname() || 'Anonymous';
@@ -145,6 +163,9 @@ function ChatView() {
   };
 
   const handleLeave = () => {
+    if (statusRef.current === 'matched') {
+      skip();
+    }
     leaveQueue();
     router.push('/');
   };
@@ -289,9 +310,10 @@ function ChatView() {
                 <button
                   type="button"
                   onClick={handleLeave}
-                  className="px-4 py-2 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] border border-[var(--border-line)] rounded-lg transition-all duration-200 cursor-pointer active:scale-95 inline-flex items-center gap-1.5 shadow-xs"
                 >
-                  Cancel
+                  <Home className="w-3.5 h-3.5 text-[var(--accent-dial)]" />
+                  <span>Return Home</span>
                 </button>
               </div>
             </div>
@@ -359,9 +381,9 @@ function ChatView() {
                 <button
                   type="button"
                   onClick={handleLeave}
-                  className="px-3.5 py-2.5 rounded-lg text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                  className="px-4 py-2.5 rounded-lg text-xs font-semibold bg-[var(--bg-surface)] hover:bg-[var(--bg-subtle)] text-[var(--text-ink)] border border-[var(--border-line)] transition-all duration-200 cursor-pointer inline-flex items-center gap-1.5 active:scale-95 shadow-xs"
                 >
-                  <Home className="w-3.5 h-3.5" />
+                  <Home className="w-3.5 h-3.5 text-[var(--accent-dial)]" />
                   <span>Home</span>
                 </button>
               </div>

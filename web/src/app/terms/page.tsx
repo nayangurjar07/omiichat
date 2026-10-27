@@ -74,7 +74,7 @@ export default function TermsPage() {
         <div className="text-center">
           <Link
             href="/"
-            className="text-xs font-semibold text-pink-400 hover:text-pink-300"
+            className="text-xs font-semibold text-[var(--accent-dial)] hover:underline"
           >
             ← Back to Home
           </Link>

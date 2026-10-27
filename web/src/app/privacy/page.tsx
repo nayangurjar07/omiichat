@@ -26,8 +26,8 @@ export default function PrivacyPage() {
 
       <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 py-12 md:py-16 space-y-10">
         <div className="space-y-3 text-center sm:text-left">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-semibold text-pink-400">
-            <Lock className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--accent-dial-subtle)] border border-[var(--accent-dial)]/20 text-xs font-semibold text-[var(--accent-dial)]">
+            <Lock className="w-3.5 h-3.5 text-[var(--accent-dial)]" />
             <span>Privacy By Architecture</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="p-5 rounded-2xl bg-zinc-900/90 border border-zinc-800 space-y-2">
-            <EyeOff className="w-6 h-6 text-indigo-400" />
+            <EyeOff className="w-6 h-6 text-[var(--accent-dial)]" />
             <h3 className="font-bold text-sm">No Registration</h3>
             <p className="text-xs text-zinc-400 leading-relaxed">
               We never ask for your email, phone number, name, or password. You are represented only by an anonymous session ID.
@@ -48,7 +48,7 @@ export default function PrivacyPage() {
           </div>
 
           <div className="p-5 rounded-2xl bg-zinc-900/90 border border-zinc-800 space-y-2">
-            <Database className="w-6 h-6 text-pink-400" />
+            <Database className="w-6 h-6 text-[var(--accent-dial)]" />
             <h3 className="font-bold text-sm">Ephemeral In-Memory Chats</h3>
             <p className="text-xs text-zinc-400 leading-relaxed">
               Messages stream directly through memory. When a conversation finishes, all in-flight messages are instantly expunged.
@@ -101,7 +101,7 @@ export default function PrivacyPage() {
         <div className="text-center">
           <Link
             href="/"
-            className="text-xs font-semibold text-pink-400 hover:text-pink-300"
+            className="text-xs font-semibold text-[var(--accent-dial)] hover:underline"
           >
             ← Back to Home
           </Link>

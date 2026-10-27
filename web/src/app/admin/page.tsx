@@ -207,7 +207,7 @@ export default function AdminPage() {
 
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="max-w-md w-full p-8 rounded-3xl bg-zinc-900 border border-zinc-800 shadow-2xl space-y-6">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-950/60 text-pink-400 flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-blue-950/60 text-blue-400 flex items-center justify-center mx-auto">
               <Lock className="w-6 h-6" />
             </div>
 
@@ -301,7 +301,7 @@ export default function AdminPage() {
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
               1-to-1 Chat Reports
             </span>
-            <div className="text-2xl font-extrabold text-indigo-400 mt-1">
+            <div className="text-2xl font-extrabold text-blue-400 mt-1">
               {directReportsCount}
             </div>
           </div>
@@ -310,7 +310,7 @@ export default function AdminPage() {
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
               Topic Room Reports
             </span>
-            <div className="text-2xl font-extrabold text-pink-400 mt-1">
+            <div className="text-2xl font-extrabold text-sky-400 mt-1">
               {roomReportsCount}
             </div>
           </div>
@@ -332,7 +332,7 @@ export default function AdminPage() {
               onClick={() => setActiveTab('reports')}
               className={`pb-2 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
                 activeTab === 'reports'
-                  ? 'border-pink-500 text-pink-400 font-bold'
+                  ? 'border-blue-500 text-blue-400 font-bold'
                   : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
@@ -342,7 +342,7 @@ export default function AdminPage() {
               onClick={() => setActiveTab('bans')}
               className={`pb-2 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
                 activeTab === 'bans'
-                  ? 'border-pink-500 text-pink-400 font-bold'
+                  ? 'border-blue-500 text-blue-400 font-bold'
                   : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
@@ -412,12 +412,12 @@ export default function AdminPage() {
 
                           {/* Room report badge */}
                           {report.roomId ? (
-                            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-pink-950/60 text-pink-400 border border-pink-900/60">
+                            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-950/60 text-sky-400 border border-sky-900/60">
                               <Flame className="w-3 h-3" />
                               <span>Room: {report.roomName || report.roomId}</span>
                             </span>
                           ) : (
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-950/60 text-indigo-400 border border-indigo-900/60">
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-950/60 text-blue-400 border border-blue-900/60">
                               1-to-1 Chat
                             </span>
                           )}
@@ -452,13 +452,13 @@ export default function AdminPage() {
                         )}
 
                         {report.mediaUrl && (
-                          <div className="flex items-center gap-2 text-xs text-pink-400 pt-1">
+                          <div className="flex items-center gap-2 text-xs text-blue-400 pt-1">
                             <ImageIcon className="w-4 h-4" />
                             <a
                               href={report.mediaUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="underline hover:text-pink-300"
+                              className="underline hover:text-blue-300"
                             >
                               Inspect Reported Media File
                             </a>
@@ -519,7 +519,7 @@ export default function AdminPage() {
                     {isExpanded && (
                       <div className="pt-3 border-t border-zinc-800 space-y-2">
                         <div className="text-xs font-semibold text-zinc-400 flex items-center gap-1.5">
-                          <MessageSquare className="w-3.5 h-3.5 text-pink-400" />
+                          <MessageSquare className="w-3.5 h-3.5 text-blue-400" />
                           <span>Recorded chat transcript context:</span>
                         </div>
 

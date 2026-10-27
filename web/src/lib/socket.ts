@@ -20,7 +20,7 @@ export function getSocket(): Socket {
       reconnectionAttempts: Infinity,
       reconnectionDelay: 500,
       reconnectionDelayMax: 3000,
-      timeout: 15000,
+      timeout: 8000,
     });
   } else if (socket.auth && typeof socket.auth === 'object') {
     (socket.auth as Record<string, unknown>).sessionId = getSessionId();
