@@ -17,7 +17,9 @@ import { ReportModal } from '@/components/chat/ReportModal';
 import { ReconnectModal } from '@/components/chat/ReconnectModal';
 import { ReportReason, ChatMessage, RoomMessage } from '@/types';
 import { saveLocalFriend } from '@/lib/friends';
-import { ShieldAlert, RefreshCw, Home, Sparkles, UserPlus, Check, AlertCircle } from 'lucide-react';
+import { sounds } from '@/lib/sound';
+import { pickPersonaForInterests, generateAiReply, AiPersona } from '@/lib/aiCompanion';
+import { ShieldAlert, RefreshCw, Home, Sparkles, UserPlus, Check, AlertCircle, Bot, Users } from 'lucide-react';
 
 function ChatView() {
   const router = useRouter();
@@ -62,9 +64,42 @@ function ChatView() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef(status);
 
+  // AI Stranger Fallback State
+  const [isAiMode, setIsAiMode] = useState(false);
+  const [aiPersona, setAiPersona] = useState<AiPersona | null>(null);
+  const [aiMessages, setAiMessages] = useState<ChatMessage[]>([]);
+  const [aiTyping, setAiTyping] = useState(false);
+  const [showAiPrompt, setShowAiPrompt] = useState(false);
+  const aiTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
+
+  // Search queue timer: if searching for > 6 seconds, offer AI stranger companion
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (status === 'searching' && !isAiMode) {
+      setShowAiPrompt(false);
+      timer = setTimeout(() => {
+        setShowAiPrompt(true);
+      }, 6000);
+    } else {
+      setShowAiPrompt(false);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [status, isAiMode]);
+
+  // When a real human match arrives from server, automatically transition from AI mode
+  useEffect(() => {
+    if (status === 'matched' && isAiMode) {
+      setIsAiMode(false);
+      setAiPersona(null);
+      setAiMessages([]);
+    }
+  }, [status, isAiMode]);
 
   useEffect(() => {
     if (status === 'matched') {
@@ -131,7 +166,28 @@ function ChatView() {
     };
   }, [skip, leaveQueue]);
 
-  const handleSkip = () => {
+  const handleStartAiChat = () => {
+    const interests = getStoredInterests();
+    const persona = pickPersonaForInterests(interests);
+    setAiPersona(persona);
+    setIsAiMode(true);
+    setShowAiPrompt(false);
+    setAiMessages([
+      {
+        id: `ai-init-${Date.now()}`,
+        senderId: persona.id,
+        senderNick: persona.nickname,
+        text: persona.greeting,
+        timestamp: Date.now(),
+        isSelf: false,
+      },
+    ]);
+  };
+
+  const handleSwitchToHuman = () => {
+    setIsAiMode(false);
+    setAiPersona(null);
+    setAiMessages([]);
     skip();
     const nick = getStoredNickname() || 'Anonymous';
     const interests = getStoredInterests();
@@ -139,7 +195,83 @@ function ChatView() {
     joinQueue(nick, interests, lang);
   };
 
+  const handleSkip = () => {
+    if (isAiMode) {
+      const interests = getStoredInterests();
+      const newPersona = pickPersonaForInterests(interests);
+      setAiPersona(newPersona);
+      setAiMessages([
+        {
+          id: `ai-init-${Date.now()}`,
+          senderId: newPersona.id,
+          senderNick: newPersona.nickname,
+          text: newPersona.greeting,
+          timestamp: Date.now(),
+          isSelf: false,
+        },
+      ]);
+      return;
+    }
+    skip();
+    const nick = getStoredNickname() || 'Anonymous';
+    const interests = getStoredInterests();
+    const lang = getStoredLanguage();
+    joinQueue(nick, interests, lang);
+  };
+
+  const handleSendMessage = (text?: string, mediaUrl?: string, mediaType?: 'image' | 'audio') => {
+    if (isAiMode && aiPersona) {
+      const userMsg: ChatMessage = {
+        id: `user-${Date.now()}`,
+        senderId: 'self',
+        text: text || '',
+        mediaUrl,
+        mediaType,
+        timestamp: Date.now(),
+        isSelf: true,
+      };
+      setAiMessages((prev) => [...prev, userMsg]);
+      setAiTyping(true);
+
+      const history = aiMessages.map((m) => ({
+        sender: m.isSelf ? ('user' as const) : ('ai' as const),
+        text: m.text || '',
+      }));
+
+      const { reply, typingDelayMs } = generateAiReply(text || '', aiPersona, history);
+
+      if (aiTypingTimeoutRef.current) clearTimeout(aiTypingTimeoutRef.current);
+      aiTypingTimeoutRef.current = setTimeout(() => {
+        setAiTyping(false);
+        setAiMessages((prev) => [
+          ...prev,
+          {
+            id: `ai-${Date.now()}`,
+            senderId: aiPersona.id,
+            senderNick: aiPersona.nickname,
+            text: reply,
+            timestamp: Date.now(),
+            isSelf: false,
+          },
+        ]);
+        sounds.playMessagePop();
+      }, typingDelayMs);
+    } else {
+      sendMessage(text, mediaUrl, mediaType);
+    }
+  };
+
+  const handleSendTyping = (isTyping: boolean) => {
+    if (!isAiMode) {
+      sendTyping(isTyping);
+    }
+  };
+
   const handleBlock = () => {
+    if (isAiMode) {
+      handleSwitchToHuman();
+      return;
+    }
     block();
     const nick = getStoredNickname() || 'Anonymous';
     const interests = getStoredInterests();
@@ -196,12 +328,17 @@ function ChatView() {
     );
   }
 
+  const activeStatus = isAiMode ? 'matched' : status;
+  const activePartnerNickname = isAiMode ? (aiPersona?.nickname || 'Stranger') : partnerNickname;
+  const activeMessages = isAiMode ? aiMessages : messages;
+  const activePartnerTyping = isAiMode ? aiTyping : partnerTyping;
+
   return (
     <div className="flex flex-col h-[100dvh] bg-[var(--bg-paper)] text-[var(--text-ink)] transition-colors overflow-hidden">
       <Navbar inChat={true} isConnected={isConnected} onRetryConnection={retryConnection} />
 
       {/* Disconnection Warning Banner */}
-      {!isConnected && (
+      {!isConnected && !isAiMode && (
         <div className="bg-[var(--bg-subtle)] border-b border-[var(--border-line)] px-4 py-2 text-xs text-center flex items-center justify-center gap-2">
           <AlertCircle className="w-3.5 h-3.5 text-[var(--color-alert)] shrink-0" />
           <span>Can't reach the server. Check your connection, then try again.</span>
@@ -211,6 +348,23 @@ function ChatView() {
             className="font-semibold text-[var(--accent-dial)] hover:underline cursor-pointer"
           >
             Retry
+          </button>
+        </div>
+      )}
+
+      {/* AI Mode Banner Alert */}
+      {isAiMode && (
+        <div className="bg-[var(--accent-dial-subtle)] border-b border-[var(--accent-dial)]/20 px-4 py-1.5 text-xs text-center flex items-center justify-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-[var(--accent-dial)] shrink-0 animate-pulse" />
+          <span className="text-[var(--text-ink)] font-medium">
+            Chatting with AI Stranger <strong>{aiPersona?.nickname}</strong>. Real human queue active in background.
+          </span>
+          <button
+            type="button"
+            onClick={handleSwitchToHuman}
+            className="ml-2 px-2.5 py-0.5 rounded-md bg-[var(--accent-dial)] text-white text-[11px] font-semibold hover:bg-[var(--accent-dial-hover)] transition-colors cursor-pointer"
+          >
+            Switch to Human
           </button>
         </div>
       )}
@@ -227,17 +381,19 @@ function ChatView() {
       <div className="flex-1 flex flex-col min-h-0 w-full max-w-3xl mx-auto">
         {/* Switchboard Chat Header */}
         <StatusBar
-          status={status}
-          partnerNickname={partnerNickname}
-          sharedInterests={sharedInterests}
+          status={activeStatus}
+          partnerNickname={activePartnerNickname}
+          sharedInterests={isAiMode && aiPersona ? aiPersona.interests : sharedInterests}
           isConnected={isConnected}
           onSkip={handleSkip}
           onBlock={handleBlock}
           onReport={() => setIsReportModalOpen(true)}
           onLeave={handleLeave}
           onRequestReconnect={() => requestReconnect()}
-          onAddFriend={handleAddFriend}
-          friendState={friendState}
+          onAddFriend={isAiMode ? undefined : handleAddFriend}
+          friendState={isAiMode ? 'none' : friendState}
+          isAiStranger={isAiMode}
+          onSwitchToHuman={handleSwitchToHuman}
         />
 
         {/* Active In-Chat Mutual Friend Request Banner */}
@@ -293,7 +449,7 @@ function ChatView() {
         {/* Messages and State Area */}
         <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 space-y-1">
           {/* SEARCHING STATE */}
-          {status === 'searching' && (
+          {activeStatus === 'searching' && (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-5">
               <div className="space-y-2 max-w-sm">
                 <h2 className="font-display text-2xl font-bold text-[var(--text-ink)] tracking-tight">
@@ -305,6 +461,36 @@ function ChatView() {
                     : 'The line is searching for an available stranger with matching interests.'}
                 </p>
               </div>
+
+              {/* AI Fallback Card when queue is empty */}
+              {showAiPrompt && (
+                <div className="w-full max-w-sm p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-line)] shadow-sm space-y-3 animate-in fade-in slide-in-from-bottom-2 text-left">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-[var(--accent-dial)]">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Queue is quiet right now</span>
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                    No other humans are waiting at this exact second. Would you like to chat with an AI Stranger while waiting?
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleStartAiChat}
+                      className="flex-1 min-h-[38px] px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent-dial)] hover:bg-[var(--accent-dial-hover)] text-white shadow-xs transition-all active:scale-95 cursor-pointer inline-flex items-center justify-center gap-1.5"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Chat with AI</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowAiPrompt(false)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+                    >
+                      Keep waiting
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center gap-3">
                 <button
@@ -320,7 +506,7 @@ function ChatView() {
           )}
 
           {/* PARTNER LEFT STATE */}
-          {status === 'partner_left' && (
+          {activeStatus === 'partner_left' && (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
               <div className="space-y-1 max-w-sm">
                 <h2 className="font-display text-xl font-bold text-[var(--text-ink)]">
@@ -391,20 +577,22 @@ function ChatView() {
           )}
 
           {/* MATCHED ACTIVE CONVERSATION */}
-          {status === 'matched' && (
+          {activeStatus === 'matched' && (
             <>
-              {messages.length === 0 ? (
+              {activeMessages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-1 text-[var(--text-muted)] select-none">
                   <p className="text-sm font-semibold text-[var(--text-ink)]">
-                    Connected with {partnerNickname || 'Stranger'}
+                    Connected with {activePartnerNickname || 'Stranger'}
                   </p>
                   <p className="text-xs">
-                    Say hello, send a photo, or record a voice note.
+                    {isAiMode
+                      ? 'Say hello or ask anything—your partner is ready!'
+                      : 'Say hello, send a photo, or record a voice note.'}
                   </p>
                 </div>
               ) : (
-                messages.map((msg, index) => {
-                  const prevMsg = index > 0 ? messages[index - 1] : null;
+                activeMessages.map((msg, index) => {
+                  const prevMsg = index > 0 ? activeMessages[index - 1] : null;
                   const isConsecutive =
                     !!prevMsg &&
                     prevMsg.senderId === msg.senderId &&
@@ -416,7 +604,7 @@ function ChatView() {
                     <MessageBubble
                       key={msg.id}
                       message={msg}
-                      partnerNickname={partnerNickname}
+                      partnerNickname={activePartnerNickname}
                       isConsecutive={isConsecutive}
                       onReportMessage={handleReportMessage}
                     />
@@ -424,7 +612,7 @@ function ChatView() {
                 })
               )}
 
-              {partnerTyping && <TypingIndicator partnerNickname={partnerNickname} />}
+              {activePartnerTyping && <TypingIndicator partnerNickname={activePartnerNickname} />}
               <div ref={messagesEndRef} />
             </>
           )}
@@ -432,14 +620,16 @@ function ChatView() {
 
         {/* Input Bar */}
         <ChatInput
-          onSendMessage={sendMessage}
-          onTyping={sendTyping}
+          onSendMessage={handleSendMessage}
+          onTyping={handleSendTyping}
           onDoubleEsc={handleSkip}
-          disabled={status !== 'matched'}
+          disabled={activeStatus !== 'matched'}
           placeholder={
-            status === 'matched'
-              ? 'Message... (Enter to send, Esc twice to skip)'
-              : status === 'searching'
+            activeStatus === 'matched'
+              ? isAiMode
+                ? 'Message stranger... (Enter to send, Esc twice for new stranger)'
+                : 'Message... (Enter to send, Esc twice to skip)'
+              : activeStatus === 'searching'
               ? 'Connecting to the line...'
               : 'Conversation ended'
           }

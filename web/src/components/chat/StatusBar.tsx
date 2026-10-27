@@ -12,6 +12,7 @@ import {
   UserPlus,
   Check,
   Home,
+  Users,
 } from 'lucide-react';
 
 interface StatusBarProps {
@@ -27,6 +28,8 @@ interface StatusBarProps {
   onAddFriend?: () => void;
   isFriendAdded?: boolean;
   friendState?: 'none' | 'pending' | 'friend';
+  isAiStranger?: boolean;
+  onSwitchToHuman?: () => void;
 }
 
 export function StatusBar({
@@ -42,6 +45,8 @@ export function StatusBar({
   onAddFriend,
   isFriendAdded = false,
   friendState,
+  isAiStranger = false,
+  onSwitchToHuman,
 }: StatusBarProps) {
   const [soundEnabled, setSoundEnabled] = useState(sounds.isEnabled());
 
@@ -56,16 +61,35 @@ export function StatusBar({
     <header className="w-full px-4 py-2.5 bg-[var(--bg-surface)] border-b border-[var(--border-line)] transition-colors">
       <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Switchboard signature line */}
-        <div className="flex-1 min-w-0 pr-2">
+        <div className="flex-1 min-w-0 pr-2 flex items-center gap-2">
           <SwitchboardLine
             status={status}
             partnerNickname={partnerNickname}
             isCompact={false}
           />
+          {isAiStranger && status === 'matched' && (
+            <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--accent-dial-subtle)] text-[var(--accent-dial)] border border-[var(--accent-dial)]/20 text-[10px] font-bold shrink-0 animate-in fade-in">
+              <Sparkles className="w-2.5 h-2.5" />
+              <span>AI Stranger</span>
+            </span>
+          )}
         </div>
 
         {/* Action Controls */}
         <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+          {/* Find Real Human Button if in AI stranger mode */}
+          {isAiStranger && onSwitchToHuman && status === 'matched' && (
+            <button
+              type="button"
+              onClick={onSwitchToHuman}
+              title="Search for a live human stranger"
+              className="min-h-[40px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent-dial)] hover:bg-[var(--accent-dial-hover)] text-white shadow-xs transition-all active:scale-95 cursor-pointer"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Find Human</span>
+            </button>
+          )}
+
           {/* Home Button */}
           <button
             type="button"
