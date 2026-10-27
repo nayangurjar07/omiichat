@@ -294,6 +294,50 @@ export function HomePageClient() {
             </form>
           </section>
 
+          {/* SEO FAQ Section */}
+          <section className="space-y-4 pt-4">
+            <h2 className="font-display text-xl sm:text-2xl font-bold text-[var(--text-ink)]">
+              Frequently Asked Questions About Stranger Chat
+            </h2>
+            <div className="space-y-3">
+              <div className="p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-line)] space-y-1.5 shadow-xs">
+                <h3 className="text-sm font-bold text-[var(--text-ink)]">
+                  How do I start talking to strangers online on Omii?
+                </h3>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                  Enter an optional nickname and interests, then press <strong>Start chatting</strong>. Our matching system connects you directly with another person on a private 1-on-1 line in seconds.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-line)] space-y-1.5 shadow-xs">
+                <h3 className="text-sm font-bold text-[var(--text-ink)]">
+                  Is Omii a free Omegle alternative?
+                </h3>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                  Yes. Omii is completely free with no registration or downloads required. It was designed as a modern, clean, and safe alternative to Omegle with interest matching, ephemeral voice notes, and instant skip controls.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-line)] space-y-1.5 shadow-xs">
+                <h3 className="text-sm font-bold text-[var(--text-ink)]">
+                  Are conversations recorded or monitored?
+                </h3>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                  No. Omii is built on ephemeral in-memory sockets. When either person leaves the line or skips, all in-flight messages are permanently erased. No chat logs or IP tracking are saved to disk.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-line)] space-y-1.5 shadow-xs">
+                <h3 className="text-sm font-bold text-[var(--text-ink)]">
+                  What if my internet disconnects during a conversation?
+                </h3>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                  You can trade a 6-digit Reconnect Code with your partner at any time. If either person disconnects, simply enter the code to resume chatting without exchanging phone numbers or social handles.
+                </p>
+              </div>
+            </div>
+          </section>
+
           {/* Honest Safety & Ephemerality Note */}
           <section className="flex items-start gap-3 p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-line)] text-xs text-[var(--text-muted)] leading-relaxed">
             <Shield className="w-4 h-4 text-[var(--accent-dial)] shrink-0 mt-0.5" />

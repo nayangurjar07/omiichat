@@ -8,6 +8,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '',
     '/chat',
     '/rooms',
+    '/omegle-alternative',
+    '/random-chat',
     '/rules',
     '/faq',
     '/privacy',
@@ -21,6 +23,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${siteConfig.url}${route}`,
     lastModified: now,
     changeFrequency: route === '' || route === '/rooms' ? 'hourly' : 'weekly',
-    priority: route === '' ? 1.0 : route === '/rooms' || route === '/chat' ? 0.9 : 0.6,
+    priority:
+      route === ''
+        ? 1.0
+        : route === '/rooms' || route === '/chat' || route === '/omegle-alternative' || route === '/random-chat'
+        ? 0.9
+        : 0.6,
   }));
 }

@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /api/
 
-Sitemap: https://omii.chat/sitemap.xml
+Sitemap: https://omiichat.antideploy.app/sitemap.xml

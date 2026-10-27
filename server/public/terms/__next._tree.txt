@@ -1,6 +1,6 @@
-:HL["/_next/static/chunks/15zzjxh_hrjm-.css","style"]
+:HL["/_next/static/chunks/2088ux1bjwhpk.css","style"]
 :HL["/_next/static/media/017d9bea37084d9b-s.p.41rroleoq1br7.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/media/c47649aa31f9e140-s.p.3lxpqujs87tck.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 2:[["children",{"s":"__PAGE__","h":160}]]
 1:[["children",{"s":"terms","h":96,"c":"$Q2"}]]
-0:{"b":"1dvqu_4ptFV6B1nwjCy63","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
+0:{"b":"P4_3Y3Ov2b4POoGVpPkoO","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
