@@ -7,10 +7,10 @@ import { API_BASE, SOCKET_URL } from '@/lib/endpoints';
 export const siteConfig = {
   siteName: 'Omii',
   name: 'Omii',
-  fullTitle: 'Omii: Anonymous Stranger Chat',
-  tagline: 'Connect two strangers on the line.',
+  fullTitle: 'Omii: Free Stranger Chat',
+  tagline: 'Talk to strangers. Make connections.',
   description:
-    'Instant anonymous 1-to-1 conversations. No account, no tracking. Just two people on a line.',
+    'Free anonymous 1-to-1 stranger chat. No sign-up needed. Talk to random people worldwide with interest matching. Safe, fast, and private.',
   domain: process.env.NEXT_PUBLIC_APP_URL || 'https://omiichat.antideploy.app',
   url: process.env.NEXT_PUBLIC_APP_URL || 'https://omiichat.antideploy.app',
   apiBase: API_BASE,

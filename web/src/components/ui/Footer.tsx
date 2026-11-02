@@ -47,7 +47,7 @@ export function Footer() {
 
         <div className="pt-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
           <p>
-            18+ only. Ephemeral conversations. Voice notes and photos vanish when chat ends.
+            Safe 1-on-1 conversations for everyone. Voice notes and photos vanish when chat ends.
           </p>
           <p>© {new Date().getFullYear()} {siteConfig.siteName}. Human-made.</p>
         </div>

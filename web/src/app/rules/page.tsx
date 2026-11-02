@@ -7,13 +7,13 @@ import { siteConfig } from '@/config/site';
 
 export const metadata: Metadata = {
   title: 'Safety & Rules – Omii: Stranger Chat',
-  description: `Strict community rules and safety guidelines for ${siteConfig.fullTitle}. Strictly 18+ adult chat with zero tolerance for minors, harassment, or spam.`,
+  description: `Community rules and safety guidelines for ${siteConfig.fullTitle}. Safe 1-to-1 stranger chat for everyone with zero tolerance for harassment, spam, or inappropriate content.`,
   alternates: {
     canonical: `${siteConfig.url}/rules`,
   },
   openGraph: {
     title: 'Safety & Rules – Omii: Stranger Chat',
-    description: `Strict community rules and safety guidelines for ${siteConfig.fullTitle}. Strictly 18+ adult chat with zero tolerance for minors, harassment, or spam.`,
+    description: `Community rules and safety guidelines for ${siteConfig.fullTitle}. Safe 1-to-1 stranger chat for everyone with zero tolerance for harassment, spam, or inappropriate content.`,
     url: `${siteConfig.url}/rules`,
     siteName: siteConfig.siteName,
   },
@@ -27,26 +27,26 @@ export default function RulesPage() {
       <main className="flex-1 max-w-3xl mx-auto px-4 sm:px-6 py-12 md:py-16 space-y-10 w-full">
         {/* Header */}
         <div className="space-y-3 text-center sm:text-left">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-xs font-medium text-rose-600 dark:text-rose-400">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--accent-dial-subtle)] border border-[var(--accent-dial)]/20 text-xs font-medium text-[var(--accent-dial)]">
             <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Strictly 18+ adult platform</span>
+            <span>Safe stranger chat for everyone</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight font-display text-[var(--text-ink)]">
             Safety and community rules
           </h1>
           <p className="text-sm text-[var(--text-muted)] max-w-xl">
-            {siteConfig.siteName} is built to be a safe, respectful place for adults to converse. Every user agrees to follow these basic guidelines.
+            {siteConfig.siteName} is built to be a safe, respectful place for everyone. All users agree to follow these basic guidelines to keep Omii welcoming and positive.
           </p>
         </div>
 
-        {/* Rule 1: Underage Zero Tolerance */}
+        {/* Rule 1: No Inappropriate Content */}
         <div className="p-6 rounded-2xl bg-rose-500/5 border border-rose-500/20 space-y-3">
           <div className="flex items-center gap-2.5 text-rose-600 dark:text-rose-400 font-bold text-base">
             <Ban className="w-5 h-5 shrink-0" />
-            <h2 className="font-display">Zero tolerance for minors (under 18)</h2>
+            <h2 className="font-display">Zero tolerance for harmful content</h2>
           </div>
           <p className="text-xs sm:text-sm text-[var(--text-ink)] opacity-90 leading-relaxed">
-            {siteConfig.fullTitle} is exclusively designed for adults 18 years of age or older. There are no youth rooms or exceptions. Any user suspected or admitted to being under 18 is immediately disconnected and permanently blocked.
+            {siteConfig.fullTitle} is a safe, moderated platform for everyone. Any user sharing inappropriate, harmful, or illegal content is immediately disconnected and permanently blocked. Keep conversations respectful and positive.
           </p>
         </div>
 

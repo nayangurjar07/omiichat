@@ -23,17 +23,17 @@ const FAQS = [
   {
     question: 'What is Omii?',
     answer:
-      'Omii is a free, modern anonymous communication platform designed for adults (18+). It provides instantaneous 1-to-1 stranger chat matching based on shared interests, as well as real-time public topic rooms and private group rooms. No registration or account is required.',
+      'Omii is a free, modern anonymous communication platform for everyone. It provides instantaneous 1-to-1 stranger chat matching based on shared interests, as well as real-time public topic rooms and private group rooms. No registration or account is required.',
   },
   {
     question: 'Do I need to create an account or provide an email?',
     answer:
-      'No. Omii is completely anonymous by default. You can simply pick any nickname, accept the 18+ safety terms, and start chatting immediately. An optional account system is available if you wish to personalize an avatar and maintain a friends list across sessions.',
+      'No. Omii is completely anonymous by default. You can simply pick any nickname and start chatting immediately. An optional account system is available if you wish to personalize an avatar and maintain a friends list across sessions.',
   },
   {
-    question: 'Is Omii strictly 18+?',
+    question: 'Is Omii safe for everyone?',
     answer:
-      'Yes. Omii is exclusively intended for adults aged 18 and older. We enforce a zero-tolerance policy against underage users. Any accounts or sessions identified as belonging to minors are immediately and permanently banned.',
+      'Yes. Omii is built to be a safe and welcoming platform for all users. We enforce a zero-tolerance policy against harassment, spam, and inappropriate content. Any accounts or sessions found to be violating safety rules are immediately and permanently banned.',
   },
   {
     question: 'How does 1-to-1 Stranger Chat work?',
