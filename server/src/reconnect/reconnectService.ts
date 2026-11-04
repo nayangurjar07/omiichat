@@ -109,3 +109,23 @@ export async function verifyReconnectCode(code: string, currentSid: string) {
     expiresAt: record.expiresAt,
   };
 }
+
+/**
+ * Periodically deletes expired reconnect codes from the database
+ */
+export async function cleanExpiredReconnectCodes(): Promise<number> {
+  try {
+    const result = await prisma.reconnectCode.deleteMany({
+      where: {
+        expiresAt: { lt: new Date() },
+      },
+    });
+    if (result.count > 0) {
+      logger.info(`reconnectService: Cleaned ${result.count} expired reconnect codes`);
+    }
+    return result.count;
+  } catch (err) {
+    logger.error('Failed to clean expired reconnect codes:', err);
+    return 0;
+  }
+}

@@ -12,10 +12,11 @@ interface ChatInputProps {
   onSkip?: () => void;
   disabled?: boolean;
   placeholder?: string;
+  isSkipConfirming?: boolean;
 }
 
 const MAX_LENGTH = 500;
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB upload cap
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB upload cap aligned with server
 
 export function ChatInput({
   onSendMessage,
@@ -24,6 +25,7 @@ export function ChatInput({
   onSkip,
   disabled = false,
   placeholder,
+  isSkipConfirming = false,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -179,16 +181,20 @@ export function ChatInput({
         </div>
       )}
 
-      {/* Prominent Mobile Thumb-Friendly Action Bar */}
+      {/* Prominent Mobile Thumb-Friendly Action Bar with 2-step confirmation */}
       {triggerSkip && (
         <div className="sm:hidden mb-2">
           <button
             type="button"
             onClick={triggerSkip}
-            className="w-full h-11 rounded bg-zinc-800 active:bg-zinc-700 text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-zinc-700 transition-colors shadow-sm"
+            className={`w-full h-11 rounded font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 border transition-all shadow-sm active:scale-95 cursor-pointer ${
+              isSkipConfirming
+                ? 'bg-amber-400 text-black border-amber-300 animate-pulse'
+                : 'bg-zinc-800 active:bg-zinc-700 text-white border-zinc-700'
+            }`}
           >
-            <FastForward className="w-4 h-4 text-emerald-400" />
-            <span>Next Match / Skip (Instant)</span>
+            <FastForward className={`w-4 h-4 ${isSkipConfirming ? 'fill-black text-black' : 'text-emerald-400'}`} />
+            <span>{isSkipConfirming ? 'Sure? Tap to confirm skip' : 'Next Match / Skip'}</span>
           </button>
         </div>
       )}

@@ -9,6 +9,7 @@ import { getReports, updateReportStatus } from '../safety/reportService';
 import { banSession, unbanSession, getBans } from '../safety/banService';
 import { logger } from '../utils/logger';
 import { extractClientIp } from '../config';
+import { enforceBan } from '../socket/handler';
 
 const router = Router();
 
@@ -107,6 +108,7 @@ router.post('/ban', async (req: Request, res: Response) => {
       return;
     }
     await banSession(sessionId, reason);
+    enforceBan(sessionId, reason);
     if (reportId) {
       await updateReportStatus(reportId, 'banned');
     }

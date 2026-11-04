@@ -8,10 +8,11 @@ import { Server } from 'socket.io';
 import { config } from './config';
 import { logger } from './utils/logger';
 import { MemoryQueue } from './matching/MemoryQueue';
-import { setupSocketHandlers } from './socket/handler';
+import { setupSocketHandlers, cleanStaleSessions } from './socket/handler';
 import adminRoutes from './admin/routes';
 import uploadRoutes, { storage } from './upload/routes';
 import authRoutes from './auth/routes';
+import { cleanExpiredReconnectCodes } from './reconnect/reconnectService';
 import { initDatabase } from './db/initDb';
 
 async function bootstrap() {
@@ -99,7 +100,7 @@ async function bootstrap() {
     },
     pingTimeout: 5000,
     pingInterval: 3000,
-    maxHttpBufferSize: 1e7, // 10MB
+    maxHttpBufferSize: 1e6, // Strict 1MB cap to block payload flood attacks
   });
 
   // Matching Queue & Sockets
@@ -120,6 +121,25 @@ async function bootstrap() {
         },
       })
     );
+
+    // Explicit dynamic SPA route fallbacks for rooms and invite links
+    app.get('/rooms/:id', (req, res, next) => {
+      const cleanId = String(req.params.id).replace(/[^a-zA-Z0-9_-]/g, '');
+      const directTarget = path.join(publicDir, 'rooms', `${cleanId}.html`);
+      if (cleanId && fs.existsSync(directTarget)) return res.sendFile(directTarget);
+      const fallbackTarget = path.join(publicDir, 'rooms', 'gaming.html');
+      if (fs.existsSync(fallbackTarget)) return res.sendFile(fallbackTarget);
+      next();
+    });
+
+    app.get('/r/:code', (req, res, next) => {
+      const cleanCode = String(req.params.code).replace(/[^a-zA-Z0-9_-]/g, '');
+      const directTarget = path.join(publicDir, 'r', `${cleanCode}.html`);
+      if (cleanCode && fs.existsSync(directTarget)) return res.sendFile(directTarget);
+      const fallbackTarget = path.join(publicDir, 'r', 'welcome.html');
+      if (fs.existsSync(fallbackTarget)) return res.sendFile(fallbackTarget);
+      next();
+    });
 
     app.get('*', (req, res) => {
       // Don't serve HTML fallback for missing static assets or API routes
@@ -152,6 +172,22 @@ async function bootstrap() {
     });
     logger.info('Static web application mounted from public directory.');
   }
+
+  // ── Automated Ephemeral Cleanup Job (Runs every 30 minutes) ──
+  const runPeriodicCleanup = async () => {
+    try {
+      const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+      await storage.cleanOlderThan(TWO_HOURS_MS);
+      await cleanExpiredReconnectCodes();
+      cleanStaleSessions(TWO_HOURS_MS);
+    } catch (err) {
+      logger.error('Error during scheduled periodic cleanup:', err);
+    }
+  };
+
+  // Run initial cleanup after 5s, then every 30 minutes
+  setTimeout(runPeriodicCleanup, 5000);
+  setInterval(runPeriodicCleanup, 30 * 60 * 1000);
 
   const port = process.env.PORT || config.port;
   server.listen(Number(port), '0.0.0.0', () => {

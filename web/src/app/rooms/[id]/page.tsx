@@ -81,6 +81,18 @@ export default function RoomChatPage({ params }: RoomPageProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [roomMessages, roomTypingUsers]);
 
+  // Smoothly auto-scroll on mobile virtual keyboard resize
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    const handleViewportResize = () => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+    window.visualViewport.addEventListener('resize', handleViewportResize);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleViewportResize);
+    };
+  }, []);
+
   const handleSendMessage = (text?: string, mediaUrl?: string, mediaType?: 'image' | 'audio') => {
     sendRoomMessage(text, mediaUrl, mediaType);
   };
@@ -145,7 +157,7 @@ export default function RoomChatPage({ params }: RoomPageProps) {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-[var(--bg-paper)] text-[var(--text-ink)] transition-colors overflow-hidden">
+    <div className="flex flex-col h-[100dvh] max-h-[100dvh] bg-[var(--bg-paper)] text-[var(--text-ink)] transition-colors overflow-hidden">
       <Navbar inChat={true} isConnected={isConnected} onRetryConnection={retryConnection} />
 
       {/* Warning Banners */}
@@ -179,7 +191,7 @@ export default function RoomChatPage({ params }: RoomPageProps) {
         {/* Chat area */}
         <div className="flex-1 flex flex-col min-h-0 bg-[var(--bg-surface)] sm:rounded-xl sm:border border-[var(--border-line)] overflow-hidden">
           {/* Room Header */}
-          <div className="flex items-center justify-between gap-3 px-4 py-3 bg-[var(--bg-surface)] border-b border-[var(--border-line)]">
+          <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 bg-[var(--bg-surface)] border-b border-[var(--border-line)]">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="p-2 rounded-lg bg-[var(--bg-subtle)] text-[var(--accent-dial)]">
                 {currentRoom?.isPrivate ? <Lock className="w-4 h-4" /> : <Users className="w-4 h-4" />}
@@ -238,7 +250,7 @@ export default function RoomChatPage({ params }: RoomPageProps) {
           </div>
 
           {/* Messages Feed */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-1">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-1">
             {roomMessages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-1 text-[var(--text-muted)] select-none">
                 <p className="text-sm font-semibold text-[var(--text-ink)]">
@@ -279,16 +291,18 @@ export default function RoomChatPage({ params }: RoomPageProps) {
           </div>
 
           {/* Room Chat Input */}
-          <ChatInput
-            onSendMessage={handleSendMessage}
-            onTyping={sendRoomTyping}
-            disabled={isRoomMuted}
-            placeholder={
-              isRoomMuted
-                ? 'You have been muted by the host.'
-                : 'Send message, photo, or audio note to the room...'
-            }
-          />
+          <div className="shrink-0">
+            <ChatInput
+              onSendMessage={handleSendMessage}
+              onTyping={sendRoomTyping}
+              disabled={isRoomMuted}
+              placeholder={
+                isRoomMuted
+                  ? 'You have been muted by the host.'
+                  : 'Send message, photo, or audio note to the room...'
+              }
+            />
+          </div>
         </div>
 
         {/* Member Sidebar / Drawer */}

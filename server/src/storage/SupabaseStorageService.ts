@@ -79,6 +79,41 @@ export class SupabaseStorageService implements IStorageService {
     return this.fallback.delete(key);
   }
 
+  /**
+   * Delete files older than maxAgeMs from Supabase storage and local fallback
+   */
+  async cleanOlderThan(maxAgeMs = 2 * 60 * 60 * 1000): Promise<number> {
+    let count = await this.fallback.cleanOlderThan(maxAgeMs);
+    if (this.isConfigured && this.supabase) {
+      try {
+        const { data: files } = await this.supabase.storage.from(this.bucket).list('', {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'asc' },
+        });
+        if (files && files.length > 0) {
+          const now = Date.now();
+          const toDelete: string[] = [];
+          for (const f of files) {
+            if (f.created_at) {
+              const fileAge = now - new Date(f.created_at).getTime();
+              if (fileAge > maxAgeMs) {
+                toDelete.push(f.name);
+              }
+            }
+          }
+          if (toDelete.length > 0) {
+            await this.supabase.storage.from(this.bucket).remove(toDelete);
+            count += toDelete.length;
+            logger.info(`SupabaseStorageService: Pruned ${toDelete.length} expired media files`);
+          }
+        }
+      } catch (err) {
+        logger.error('Error during SupabaseStorageService cleanOlderThan:', err);
+      }
+    }
+    return count;
+  }
+
   getUrl(key: string): string {
     if (this.isConfigured && this.supabase) {
       const { data } = this.supabase.storage.from(this.bucket).getPublicUrl(key);

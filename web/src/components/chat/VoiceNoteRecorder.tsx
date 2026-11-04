@@ -32,9 +32,23 @@ export function VoiceNoteRecorder({ onAudioReady, onCancel }: VoiceNoteRecorderP
   }, []);
 
   const cleanup = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      try {
+        streamRef.current.getTracks().forEach((track) => {
+          track.stop();
+        });
+      } catch {}
+      streamRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {}
+      mediaRecorderRef.current = null;
     }
   };
 
@@ -187,7 +201,10 @@ export function VoiceNoteRecorder({ onAudioReady, onCancel }: VoiceNoteRecorderP
 
       <div className="flex items-center gap-1.5">
         <button
-          onClick={onCancel}
+          onClick={() => {
+            cleanup();
+            onCancel();
+          }}
           title="Cancel recording"
           className="p-2 rounded-xl text-zinc-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors cursor-pointer"
         >

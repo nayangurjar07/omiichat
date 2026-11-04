@@ -4,6 +4,7 @@ import { useState, useEffect, KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
 import { Footer } from '@/components/ui/Footer';
+import { AgeGateModal } from '@/components/ui/AgeGateModal';
 import {
   setStoredNickname,
   getStoredNickname,
@@ -51,6 +52,7 @@ export function HomePageClient() {
   const [interests, setInterests] = useState<string[]>([]);
   const [reconnectCodeInput, setReconnectCodeInput] = useState('');
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
+  const [isAgeModalOpen, setIsAgeModalOpen] = useState(false);
 
   useEffect(() => {
     const savedNick = getStoredNickname();
@@ -85,11 +87,22 @@ export function HomePageClient() {
     setStoredInterests(next);
   };
 
-  const handleStartChat = () => {
+  const proceedToChat = () => {
     const finalNick = nickname.trim() || 'Anonymous';
     setStoredNickname(finalNick);
     setStoredInterests(interests);
     router.push('/chat');
+  };
+
+  const handleStartChat = () => {
+    if (typeof window !== 'undefined') {
+      const isVerified = localStorage.getItem('omii_age_verified') === 'true';
+      if (!isVerified) {
+        setIsAgeModalOpen(true);
+        return;
+      }
+    }
+    proceedToChat();
   };
 
   const handleJoinByReconnect = (e: React.FormEvent) => {
@@ -327,6 +340,16 @@ export function HomePageClient() {
           </div>
         </div>
       </main>
+
+      <AgeGateModal
+        isOpen={isAgeModalOpen}
+        onConfirm={() => {
+          localStorage.setItem('omii_age_verified', 'true');
+          setIsAgeModalOpen(false);
+          proceedToChat();
+        }}
+        onDecline={() => setIsAgeModalOpen(false)}
+      />
 
       <Footer />
     </div>

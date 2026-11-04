@@ -28,6 +28,7 @@ interface StatusBarProps {
   onAddFriend?: () => void;
   isFriendAdded?: boolean;
   friendState?: 'none' | 'pending' | 'friend';
+  isSkipConfirming?: boolean;
 }
 
 export function StatusBar({
@@ -43,6 +44,7 @@ export function StatusBar({
   onAddFriend,
   isFriendAdded = false,
   friendState,
+  isSkipConfirming = false,
 }: StatusBarProps) {
   const [soundEnabled, setSoundEnabled] = useState(sounds.isEnabled());
 
@@ -140,17 +142,25 @@ export function StatusBar({
             </button>
           )}
 
-          {/* Skip / Next Button (Primary High-Contrast Action) */}
+          {/* Skip / Next Button (Primary High-Contrast Action with 2-step guard) */}
           <button
             type="button"
             onClick={onSkip}
-            title="Next match (hit Esc anytime)"
-            className="h-9 inline-flex items-center gap-1.5 px-3.5 rounded bg-white hover:bg-zinc-200 text-black text-xs font-mono font-bold tracking-wide transition-colors cursor-pointer active:scale-95 shadow-sm"
+            title={isSkipConfirming ? 'Confirm disconnect (or press Esc again)' : 'Next match (hit Esc anytime)'}
+            className={`h-9 inline-flex items-center gap-1.5 px-3.5 rounded text-xs font-mono font-bold tracking-wide transition-all cursor-pointer active:scale-95 shadow-sm ${
+              isSkipConfirming
+                ? 'bg-amber-400 hover:bg-amber-300 text-black border border-amber-300 animate-pulse'
+                : 'bg-white hover:bg-zinc-200 text-black'
+            }`}
           >
             <FastForward className="w-3.5 h-3.5 fill-black" />
-            <span>Next</span>
-            <kbd className="hidden sm:inline-block px-1 py-0.2 rounded text-[10px] bg-zinc-200 text-zinc-800 border border-zinc-300">
-              Esc
+            <span>{isSkipConfirming ? 'Sure?' : 'Next'}</span>
+            <kbd className={`hidden sm:inline-block px-1 py-0.2 rounded text-[10px] border ${
+              isSkipConfirming
+                ? 'bg-amber-200 text-amber-950 border-amber-400'
+                : 'bg-zinc-200 text-zinc-800 border-zinc-300'
+            }`}>
+              {isSkipConfirming ? 'Esc again' : 'Esc'}
             </kbd>
           </button>
         </div>

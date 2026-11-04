@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, Suspense } from 'react';
+import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSocket } from '@/hooks/useSocket';
 import {
@@ -15,6 +15,7 @@ import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ReportModal } from '@/components/chat/ReportModal';
 import { ReconnectModal } from '@/components/chat/ReconnectModal';
+import { AgeGateModal } from '@/components/ui/AgeGateModal';
 import { ReportReason, ChatMessage, RoomMessage } from '@/types';
 import { sounds } from '@/lib/sound';
 import { ShieldAlert, RefreshCw, Home, Sparkles, UserPlus, Check, AlertCircle, FastForward } from 'lucide-react';
@@ -81,9 +82,12 @@ function ChatView() {
   const [reportingMessage, setReportingMessage] = useState<ChatMessage | RoomMessage | null>(null);
   const [activeIcebreaker, setActiveIcebreaker] = useState<string>('');
   const [rematchCountdown, setRematchCountdown] = useState<number | null>(null);
+  const [skipPendingConfirmation, setSkipPendingConfirmation] = useState(false);
+  const [isAgeModalOpen, setIsAgeModalOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef(status);
+  const skipTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     statusRef.current = status;
@@ -120,17 +124,70 @@ function ChatView() {
     return () => clearTimeout(timer);
   }, [rematchCountdown]);
 
-  // Desktop Global Escape Key to instantly skip
+  // Check 18+ Age Verification from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isVerified = localStorage.getItem('omii_age_verified') === 'true';
+      if (!isVerified) {
+        setIsAgeModalOpen(true);
+      }
+    }
+  }, []);
+
+  // Visual Viewport resize listener: Smoothly auto-scroll when mobile virtual keyboard opens
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    const handleViewportResize = () => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+    window.visualViewport.addEventListener('resize', handleViewportResize);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleViewportResize);
+    };
+  }, []);
+
+  const handleSkip = useCallback(() => {
+    setRematchCountdown(null);
+    setSkipPendingConfirmation(false);
+    if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
+    skip();
+    const nick = getStoredNickname() || 'Anonymous';
+    const interests = getStoredInterests();
+    const lang = getStoredLanguage();
+    joinQueue(nick, interests, lang);
+  }, [skip, joinQueue]);
+
+  // Two-Step Skip Guard: Prevents accidental disconnects on mobile taps or single Esc presses
+  const initiateSkip = useCallback(() => {
+    if (statusRef.current === 'matched') {
+      if (skipPendingConfirmation) {
+        if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
+        setSkipPendingConfirmation(false);
+        handleSkip();
+      } else {
+        setSkipPendingConfirmation(true);
+        if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
+        skipTimerRef.current = setTimeout(() => {
+          setSkipPendingConfirmation(false);
+        }, 2500);
+      }
+    } else {
+      setSkipPendingConfirmation(false);
+      handleSkip();
+    }
+  }, [skipPendingConfirmation, handleSkip]);
+
+  // Desktop Global Escape Key with Two-Step Guard
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        handleSkip();
+        initiateSkip();
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
+  }, [initiateSkip]);
 
   const isAlreadyFriend =
     simulatedFriendAccepted ||
@@ -194,14 +251,6 @@ function ChatView() {
     };
   }, [skip, leaveQueue]);
 
-  const handleSkip = () => {
-    setRematchCountdown(null);
-    skip();
-    const nick = getStoredNickname() || 'Anonymous';
-    const interests = getStoredInterests();
-    const lang = getStoredLanguage();
-    joinQueue(nick, interests, lang);
-  };
 
   const handleSendMessage = (text?: string, mediaUrl?: string, mediaType?: 'image' | 'audio') => {
     sendMessage(text, mediaUrl, mediaType);
@@ -295,19 +344,22 @@ function ChatView() {
       {/* Main Terminal Chat Container */}
       <div className="flex-1 flex flex-col min-h-0 w-full max-w-3xl mx-auto">
         {/* Switchboard Chat Header */}
-        <StatusBar
-          status={status}
-          partnerNickname={partnerNickname}
-          sharedInterests={sharedInterests}
-          isConnected={isConnected}
-          onSkip={handleSkip}
-          onBlock={handleBlock}
-          onReport={() => setIsReportModalOpen(true)}
-          onLeave={handleLeave}
-          onRequestReconnect={() => requestReconnect()}
-          onAddFriend={handleAddFriend}
-          friendState={friendState}
-        />
+        <div className="shrink-0">
+          <StatusBar
+            status={status}
+            partnerNickname={partnerNickname}
+            sharedInterests={sharedInterests}
+            isConnected={isConnected}
+            onSkip={initiateSkip}
+            isSkipConfirming={skipPendingConfirmation}
+            onBlock={handleBlock}
+            onReport={() => setIsReportModalOpen(true)}
+            onLeave={handleLeave}
+            onRequestReconnect={() => requestReconnect()}
+            onAddFriend={handleAddFriend}
+            friendState={friendState}
+          />
+        </div>
 
         {/* Task 4: Automated Icebreaker Banner at top of new chat */}
         {status === 'matched' && activeIcebreaker && messages.length <= 2 && (
@@ -377,7 +429,7 @@ function ChatView() {
         )}
 
         {/* Messages and State Area */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 sm:px-6 space-y-1">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 sm:px-6 space-y-1">
           {/* SEARCHING STATE */}
           {status === 'searching' && (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 font-mono">
@@ -505,21 +557,37 @@ function ChatView() {
           )}
         </div>
 
-        {/* Input Bar with Instant Keyboard Esc & Mobile Skip */}
-        <ChatInput
-          onSendMessage={handleSendMessage}
-          onTyping={handleSendTyping}
-          onSkip={handleSkip}
-          disabled={status !== 'matched'}
-          placeholder={
-            status === 'matched'
-              ? 'Type a message... (Enter to send, Esc to skip)'
-              : status === 'searching'
-              ? 'Connecting to the line...'
-              : 'Conversation ended'
-          }
-        />
+        {/* Input Bar with Instant Keyboard Esc & Mobile Skip (2-step guard) */}
+        <div className="shrink-0">
+          <ChatInput
+            onSendMessage={handleSendMessage}
+            onTyping={handleSendTyping}
+            onSkip={initiateSkip}
+            isSkipConfirming={skipPendingConfirmation}
+            disabled={status !== 'matched'}
+            placeholder={
+              status === 'matched'
+                ? 'Type a message... (Enter to send, Esc to skip)'
+                : status === 'searching'
+                ? 'Connecting to the line...'
+                : 'Conversation ended'
+            }
+          />
+        </div>
       </div>
+
+      {/* 18+ Age & Safety Gate Modal */}
+      <AgeGateModal
+        isOpen={isAgeModalOpen}
+        onConfirm={() => {
+          localStorage.setItem('omii_age_verified', 'true');
+          setIsAgeModalOpen(false);
+        }}
+        onDecline={() => {
+          setIsAgeModalOpen(false);
+          router.push('/');
+        }}
+      />
 
       {/* Report Modal */}
       <ReportModal

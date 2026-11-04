@@ -62,12 +62,18 @@ export function VoiceNotePlayer({ audioUrl, isSelf = false }: VoiceNotePlayerPro
 
     return () => {
       audio.pause();
+      audio.src = '';
       audio.removeEventListener('loadedmetadata', updateDuration);
       audio.removeEventListener('durationchange', updateDuration);
       audio.removeEventListener('canplay', updateDuration);
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('ended', onEnded);
       audioRef.current = null;
+      if (resolvedUrl.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(resolvedUrl);
+        } catch {}
+      }
     };
   }, [resolvedUrl]);
 

@@ -45,6 +45,41 @@ export class LocalStorageService implements IStorageService {
     }
   }
 
+  /**
+   * Delete ephemeral media files older than maxAgeMs (default 2 hours).
+   * Prevents local disk exhaustion on container runs.
+   */
+  async cleanOlderThan(maxAgeMs = 2 * 60 * 60 * 1000): Promise<number> {
+    try {
+      if (!fs.existsSync(this.uploadDir)) return 0;
+      const files = await fs.promises.readdir(this.uploadDir);
+      const now = Date.now();
+      let deletedCount = 0;
+
+      for (const file of files) {
+        if (file === '.gitkeep') continue;
+        const filePath = path.join(this.uploadDir, file);
+        try {
+          const stats = await fs.promises.stat(filePath);
+          if (now - stats.mtimeMs > maxAgeMs) {
+            await fs.promises.unlink(filePath);
+            deletedCount++;
+          }
+        } catch {
+          // File might have already been deleted
+        }
+      }
+
+      if (deletedCount > 0) {
+        logger.info(`LocalStorageService: Pruned ${deletedCount} ephemeral media files older than ${maxAgeMs / 3600000}h`);
+      }
+      return deletedCount;
+    } catch (err) {
+      logger.error('Error during LocalStorageService cleanOlderThan:', err);
+      return 0;
+    }
+  }
+
   getUrl(key: string): string {
     return `${this.baseUrl}/${key}`;
   }

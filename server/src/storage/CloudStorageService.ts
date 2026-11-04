@@ -164,6 +164,45 @@ export class CloudStorageService implements IStorageService {
     return this.localFallback.delete(key);
   }
 
+  /**
+   * Periodically deletes ephemeral media older than maxAgeMs (default 2 hours)
+   * across local storage and Supabase storage to prevent disk/quota overflow.
+   */
+  async cleanOlderThan(maxAgeMs = 2 * 60 * 60 * 1000): Promise<number> {
+    let count = 0;
+    count += await this.localFallback.cleanOlderThan(maxAgeMs);
+
+    if (this.activeProvider === 'supabase' && this.supabase) {
+      try {
+        const { data: files } = await this.supabase.storage.from(this.supabaseBucket).list('', {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'asc' },
+        });
+        if (files && files.length > 0) {
+          const now = Date.now();
+          const toDelete: string[] = [];
+          for (const f of files) {
+            if (f.created_at) {
+              const fileAge = now - new Date(f.created_at).getTime();
+              if (fileAge > maxAgeMs) {
+                toDelete.push(f.name);
+              }
+            }
+          }
+          if (toDelete.length > 0) {
+            await this.supabase.storage.from(this.supabaseBucket).remove(toDelete);
+            count += toDelete.length;
+            logger.info(`CloudStorageService: Pruned ${toDelete.length} expired media from Supabase bucket`);
+          }
+        }
+      } catch (supaErr) {
+        logger.error('Error during Supabase cleanOlderThan:', supaErr);
+      }
+    }
+
+    return count;
+  }
+
   getUrl(key: string): string {
     if (this.activeProvider === 's3' && this.s3Bucket) {
       return this.formatS3Url(key);

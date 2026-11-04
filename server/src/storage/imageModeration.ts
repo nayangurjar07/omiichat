@@ -19,7 +19,10 @@ export function hasValidMediaSignature(buffer: Buffer): boolean {
   const isWebp = buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP';
   const isOgg = buffer.toString('ascii', 0, 4) === 'OggS';
   const isWebm = buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3;
-  return isJpeg || isPng || isWebp || isOgg || isWebm;
+  const isMp4 = buffer.toString('ascii', 4, 8) === 'ftyp';
+  const isMp3 = buffer.toString('ascii', 0, 3) === 'ID3' || (buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0);
+  const isWav = buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WAVE';
+  return isJpeg || isPng || isWebp || isOgg || isWebm || isMp4 || isMp3 || isWav;
 }
 
 /**

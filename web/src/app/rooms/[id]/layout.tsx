@@ -7,7 +7,16 @@ export const metadata: Metadata = {
 };
 
 export function generateStaticParams() {
-  return [{ id: 'gaming' }];
+  return [
+    { id: 'gaming' },
+    { id: 'music' },
+    { id: 'anime' },
+    { id: 'coding' },
+    { id: 'movies' },
+    { id: 'india' },
+    { id: 'college' },
+    { id: 'late-night' },
+  ];
 }
 
 export default function RoomChatLayout({

@@ -14,4 +14,5 @@ export interface IStorageService {
   upload(buffer: Buffer, originalFilename: string, mimeType: string): Promise<UploadResult>;
   delete(key: string): Promise<void>;
   getUrl(key: string): string;
+  cleanOlderThan?(maxAgeMs: number): Promise<number>;
 }

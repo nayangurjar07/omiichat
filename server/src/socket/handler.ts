@@ -14,9 +14,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { EVENTS } from './events';
 import { IMatchingQueue, QueueUser, MatchResult } from '../matching/types';
 import { Matcher } from '../matching/matcher';
-import { RateLimiter } from '../safety/rateLimiter';
+import { RateLimiter, TokenBucketLimiter } from '../safety/rateLimiter';
 import { filterProfanity } from '../safety/profanityFilter';
-import { sanitizeMessage, sanitizeNickname, sanitizeInput } from '../utils/sanitize';
+import { sanitizeMessage, sanitizeNickname, sanitizeRoomName, sanitizeTag, sanitizeInput } from '../utils/sanitize';
 import { createReport, CreateReportInput } from '../safety/reportService';
 import { isBanned, checkAutoBan } from '../safety/banService';
 import { RoomManager, ChatRoomInstance } from '../rooms/RoomManager';
@@ -59,7 +59,12 @@ const socketToNickname = new Map<string, string>();
 const sessionToSocket = new Map<string, string>();
 const sessionBlockList = new Map<string, Set<string>>();
 const rateLimiter = new RateLimiter();
+const tokenBucket = new TokenBucketLimiter();
 const socketToIp = new Map<string, string>();
+
+let globalIo: Server | null = null;
+let globalQueue: IMatchingQueue | null = null;
+let globalMatcher: Matcher | null = null;
 
 // ─── Active Server-Side Bot Sessions ─────────────────────────────────
 export interface ActiveBotSession {
@@ -122,6 +127,92 @@ const pendingFriendRequests = new Map<string, {
 
 let onlineCount = 0;
 let roomCounter = 0;
+
+/**
+ * Real-Time Ban Enforcement & Socket Teardown:
+ * Immediately ejects user from queues, active 1-to-1 chats (notifying partner),
+ * topic rooms, and forcibly disconnects their socket.
+ */
+export function enforceBan(sessionId: string, reason = 'Your session has been banned due to violations of community rules.'): void {
+  try {
+    const socketId = sessionToSocket.get(sessionId);
+    if (!socketId) return;
+
+    const io = globalIo;
+    const matcher = globalMatcher;
+    const queue = globalQueue;
+
+    // 1. Remove from matching queue
+    if (queue) queue.remove(socketId);
+
+    // 2. Drop any bot session
+    if (matcher) {
+      matcher.dropBot(socketId);
+    } else {
+      dropBotSession(socketId);
+    }
+
+    // 3. Clean up active 1-to-1 chat & notify partner
+    const roomId = socketToRoom.get(socketId);
+    if (roomId && io) {
+      cleanupRoom(io, roomId, socketId, matcher || undefined);
+    }
+
+    // 4. Clean up topic room if present
+    const topicRoomId = socketToTopicRoom.get(socketId);
+    if (topicRoomId) {
+      const room = roomManager.getRoom(topicRoomId);
+      if (room) {
+        room.removeMember(sessionId);
+      }
+      socketToTopicRoom.delete(socketId);
+      if (io) broadcastRoomList(io);
+    }
+
+    // 5. Emit forced ban event & immediately terminate socket
+    if (io) {
+      io.to(socketId).emit(EVENTS.BANNED, { reason });
+      const targetSocket = io.sockets.sockets.get(socketId);
+      if (targetSocket) {
+        targetSocket.disconnect(true);
+      }
+    }
+
+    // 6. Clean mapping state
+    sessionToSocket.delete(sessionId);
+    socketToSession.delete(socketId);
+    socketToNickname.delete(socketId);
+    socketToRoom.delete(socketId);
+
+    logger.info(`Enforced real-time ban and socket teardown for session: ${sessionId}`);
+  } catch (err) {
+    logger.error(`Error enforcing ban on session ${sessionId}:`, err);
+  }
+}
+
+/**
+ * Automated periodic cleanup of stale guest sessions, reconnect tokens, and rate limits
+ */
+export function cleanStaleSessions(maxAgeMs = 2 * 60 * 60 * 1000): void {
+  const now = Date.now();
+  for (const [sid, pres] of sessionPresence.entries()) {
+    if (!pres.isOnline && now - pres.lastSeenAt > maxAgeMs) {
+      sessionPresence.delete(sid);
+    }
+  }
+  for (const [key, item] of pendingReconnects.entries()) {
+    if (now - item.timestamp > maxAgeMs) {
+      pendingReconnects.delete(key);
+    }
+  }
+  for (const [key, item] of pendingFriendRequests.entries()) {
+    if (now - item.timestamp > maxAgeMs) {
+      pendingFriendRequests.delete(key);
+    }
+  }
+  tokenBucket.prune();
+  logger.info('Cleaned stale in-memory guest sessions, presence, and token buckets');
+}
 
 function broadcastPresenceChange(io: Server, friendCode: string, isOnline: boolean, lastSeenAt: number): void {
   const subscribers = friendSubscribers.get(friendCode);
@@ -420,7 +511,16 @@ function handleMatch(io: Server, match: MatchResult, matcher?: Matcher): void {
     return;
   }
 
-  // Regular human-to-human match
+  // Regular human-to-human match: clean state isolation from prior bot sessions
+  if (activeBotSessions.has(match.user1.socketId)) {
+    if (matcher) matcher.dropBot(match.user1.socketId);
+    else dropBotSession(match.user1.socketId);
+  }
+  if (activeBotSessions.has(match.user2.socketId)) {
+    if (matcher) matcher.dropBot(match.user2.socketId);
+    else dropBotSession(match.user2.socketId);
+  }
+
   const roomId = generateRoomId();
   const room: ChatRoom = {
     id: roomId,
@@ -455,9 +555,22 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
   });
   matcher.start(1000);
 
+  globalIo = io;
+  globalQueue = queue;
+  globalMatcher = matcher;
+
   io.on('connection', (socket: Socket) => {
     onlineCount++;
     broadcastOnlineCount(io);
+
+    // Enforce per-event token-bucket rate limiting across all socket events
+    socket.use((_packet, next) => {
+      if (!tokenBucket.consume(socket.id, 25, 10, 1)) {
+        socket.emit(EVENTS.RATE_LIMITED, { retryAfterMs: 1500 });
+        return; // Drop socket flood packet
+      }
+      next();
+    });
 
     const clientIp = getSocketClientIp(socket);
     socketToIp.set(socket.id, clientIp);
@@ -725,11 +838,7 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
 
         const wasBanned = await checkAutoBan(partnerSessionId);
         if (wasBanned) {
-          io.to(partnerSocketId).emit(EVENTS.BANNED, {
-            reason: 'Your session has been banned due to multiple user reports.',
-          });
-          const partnerSocket = io.sockets.sockets.get(partnerSocketId);
-          if (partnerSocket) partnerSocket.disconnect(true);
+          enforceBan(partnerSessionId, 'Your session has been banned due to multiple user reports.');
         }
 
         if (!sessionBlockList.has(sessionId)) {
@@ -1186,16 +1295,7 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
           await createReport(reportInput);
           const wasBanned = await checkAutoBan(data.reportedSid);
           if (wasBanned) {
-            const reportedSocketId = sessionToSocket.get(data.reportedSid);
-            if (reportedSocketId) {
-              const targetSocket = io.sockets.sockets.get(reportedSocketId);
-              if (targetSocket) {
-                targetSocket.emit(EVENTS.BANNED, {
-                  reason: 'Your session has been banned due to multiple user reports.',
-                });
-                targetSocket.disconnect(true);
-              }
-            }
+            enforceBan(data.reportedSid, 'Your session has been banned due to multiple user reports.');
           }
 
           socket.emit(EVENTS.ERROR, {
@@ -1456,6 +1556,7 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
 
       queue.remove(socket.id);
       rateLimiter.remove(socket.id);
+      tokenBucket.remove(socket.id);
       socketToIp.delete(socket.id);
       socketToSession.delete(socket.id);
       socketToNickname.delete(socket.id);
