@@ -62,8 +62,14 @@ export class RateLimiter {
     return { allowed: true, retryAfterMs: 0, isRepeat: false };
   }
 
-  /** Clean up when a socket disconnects */
-  remove(socketId: string): void {
-    this.entries.delete(socketId);
+  /** Clean up when a socket or IP disconnects */
+  remove(key: string): void {
+    const entry = this.entries.get(key);
+    if (!entry) return;
+    const now = Date.now();
+    entry.timestamps = entry.timestamps.filter((t) => now - t < WINDOW_MS);
+    if (entry.timestamps.length === 0) {
+      this.entries.delete(key);
+    }
   }
 }

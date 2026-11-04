@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, KeyboardEvent, ChangeEvent } from 'react';
-import { SendHorizonal, Mic, Image as ImageIcon, Loader2, X } from 'lucide-react';
+import { SendHorizonal, Mic, Image as ImageIcon, Loader2, X, FastForward, CornerDownLeft } from 'lucide-react';
 import { VoiceNoteRecorder } from './VoiceNoteRecorder';
 import { getApiBase } from '@/lib/endpoints';
 
@@ -9,17 +9,19 @@ interface ChatInputProps {
   onSendMessage: (text?: string, mediaUrl?: string, mediaType?: 'image' | 'audio') => void;
   onTyping: (isTyping: boolean) => void;
   onDoubleEsc?: () => void;
+  onSkip?: () => void;
   disabled?: boolean;
   placeholder?: string;
 }
 
 const MAX_LENGTH = 500;
-const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // 3 MB
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB upload cap
 
 export function ChatInput({
   onSendMessage,
   onTyping,
   onDoubleEsc,
+  onSkip,
   disabled = false,
   placeholder,
 }: ChatInputProps) {
@@ -28,11 +30,25 @@ export function ChatInput({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
 
-  const lastEscTimeRef = useRef<number>(0);
   const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isTypingRef = useRef<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const triggerSkip = onSkip || onDoubleEsc;
+
+  // Global Escape key listener on desktop to immediately trigger partner disconnection & rematch
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape' && triggerSkip && !disabled) {
+        e.preventDefault();
+        triggerSkip();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [triggerSkip, disabled]);
 
   useEffect(() => {
     if (!disabled && !isRecording && textareaRef.current) {
@@ -60,14 +76,9 @@ export function ChatInput({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Escape' && onDoubleEsc) {
-      const now = Date.now();
-      if (now - lastEscTimeRef.current < 500) {
-        onDoubleEsc();
-        lastEscTimeRef.current = 0;
-      } else {
-        lastEscTimeRef.current = now;
-      }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (triggerSkip) triggerSkip();
       return;
     }
 
@@ -101,7 +112,7 @@ export function ChatInput({
     e.target.value = '';
 
     if (file.size > MAX_IMAGE_BYTES) {
-      setImageError('Image must be under 3 MB.');
+      setImageError('Image must be under 2 MB.');
       setTimeout(() => setImageError(null), 4000);
       return;
     }
@@ -158,12 +169,26 @@ export function ChatInput({
   const charsLeft = MAX_LENGTH - text.length;
 
   return (
-    <div className="w-full bg-[var(--bg-surface)] border-t border-[var(--border-line)] p-2.5 sm:p-3 transition-colors pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <div className="w-full bg-[#121212] border-t border-[#27272a] p-2 sm:p-3 transition-colors pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       {imageError && (
-        <div className="max-w-4xl mx-auto mb-2 p-2 rounded-lg bg-rose-500/10 border border-[var(--color-alert)]/30 text-xs text-[var(--color-alert)] flex items-center justify-between">
+        <div className="max-w-4xl mx-auto mb-2 p-2 rounded bg-rose-950/60 border border-rose-500/40 text-xs font-mono text-rose-300 flex items-center justify-between">
           <span>{imageError}</span>
           <button type="button" onClick={() => setImageError(null)} className="cursor-pointer">
             <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Prominent Mobile Thumb-Friendly Action Bar */}
+      {triggerSkip && (
+        <div className="sm:hidden mb-2">
+          <button
+            type="button"
+            onClick={triggerSkip}
+            className="w-full h-11 rounded bg-zinc-800 active:bg-zinc-700 text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-zinc-700 transition-colors shadow-sm"
+          >
+            <FastForward className="w-4 h-4 text-emerald-400" />
+            <span>Next Match / Skip (Instant)</span>
           </button>
         </div>
       )}
@@ -184,6 +209,21 @@ export function ChatInput({
               className="hidden"
             />
 
+            {/* Desktop Quick Skip Action Button */}
+            {triggerSkip && (
+              <button
+                type="button"
+                onClick={triggerSkip}
+                title="Skip partner instantly (or hit Esc)"
+                className="hidden sm:inline-flex h-11 px-3 items-center justify-center rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-zinc-700 font-mono text-xs font-bold transition-colors cursor-pointer shrink-0"
+              >
+                <span>Skip</span>
+                <kbd className="ml-1.5 px-1 py-0.2 rounded text-[10px] bg-zinc-900 text-zinc-400 border border-zinc-700">
+                  Esc
+                </kbd>
+              </button>
+            )}
+
             {/* Media attachment buttons */}
             <div className="flex items-center gap-1 shrink-0 pb-0.5">
               <button
@@ -192,10 +232,10 @@ export function ChatInput({
                 disabled={disabled || isUploadingImage}
                 title="Send photo (JPEG, PNG, WebP)"
                 aria-label="Send photo"
-                className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer disabled:opacity-40"
+                className="w-10 h-10 inline-flex items-center justify-center rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-40"
               >
                 {isUploadingImage ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-[var(--accent-dial)]" />
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
                 ) : (
                   <ImageIcon className="w-4 h-4" />
                 )}
@@ -207,7 +247,7 @@ export function ChatInput({
                 disabled={disabled}
                 title="Record voice note"
                 aria-label="Record voice note"
-                className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer disabled:opacity-40"
+                className="w-10 h-10 inline-flex items-center justify-center rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-40"
               >
                 <Mic className="w-4 h-4" />
               </button>
@@ -227,13 +267,13 @@ export function ChatInput({
                   placeholder ||
                   (disabled
                     ? 'Connecting to the line...'
-                    : 'Message... (Enter to send, Esc twice to skip)')
+                    : 'Type a message... (Enter to send, Esc to skip)')
                 }
-                className="w-full min-h-[44px] px-3.5 py-2.5 text-sm rounded-lg bg-[var(--bg-paper)] border border-[var(--border-line)] text-[var(--text-ink)] placeholder-[var(--text-muted)] focus:border-[var(--accent-dial)] resize-none transition-colors disabled:opacity-50"
+                className="w-full min-h-[44px] px-3.5 py-2.5 text-sm rounded bg-[#0a0a0a] border border-[#27272a] text-zinc-100 placeholder-zinc-600 focus:border-zinc-400 focus:outline-none resize-none transition-colors disabled:opacity-50 font-sans"
               />
 
               {text.length > 400 && (
-                <span className="absolute right-3 bottom-2 text-[10px] font-mono text-[var(--text-muted)]">
+                <span className="absolute right-3 bottom-2 text-[10px] font-mono text-zinc-500">
                   {charsLeft}
                 </span>
               )}
@@ -245,7 +285,7 @@ export function ChatInput({
               onClick={handleSend}
               disabled={disabled || !text.trim()}
               aria-label="Send message"
-              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-lg bg-[var(--accent-dial)] hover:bg-[var(--accent-dial-hover)] text-white disabled:opacity-40 transition-colors cursor-pointer shrink-0 pb-0.5 active:scale-95"
+              className="h-11 px-3.5 inline-flex items-center justify-center rounded bg-white hover:bg-zinc-200 text-black font-mono font-bold text-xs disabled:opacity-40 transition-colors cursor-pointer shrink-0 pb-0.5 active:scale-95"
             >
               <SendHorizonal className="w-4 h-4" />
             </button>

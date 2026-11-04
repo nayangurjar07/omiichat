@@ -75,7 +75,11 @@ export class CloudStorageService implements IStorageService {
 
     // 3. Fallback to local storage (ephemeral during dev)
     this.activeProvider = 'local';
-    logger.info('CloudStorageService: No S3 or Supabase cloud storage configured; using local storage fallback.');
+    if (process.env.NODE_ENV === 'production') {
+      logger.warn('CloudStorageService: Production environment detected without persistent S3 or Supabase cloud credentials. Set SUPABASE_URL or AWS_S3_BUCKET.');
+    } else {
+      logger.info('CloudStorageService: No S3 or Supabase cloud storage configured; using local storage fallback.');
+    }
   }
 
   async upload(buffer: Buffer, originalFilename: string, mimeType: string): Promise<UploadResult> {

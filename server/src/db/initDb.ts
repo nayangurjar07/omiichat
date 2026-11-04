@@ -1,10 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
+import { hydrateActiveBans } from '../safety/banService';
 
 const prisma = new PrismaClient();
 
 export async function initDatabase(): Promise<void> {
   try {
+    const isPostgres = (process.env.DATABASE_URL || '').startsWith('postgres');
+    const timestampType = isPostgres ? 'TIMESTAMP(3)' : 'DATETIME';
+
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "Report" (
         "id" TEXT NOT NULL PRIMARY KEY,
@@ -18,7 +22,7 @@ export async function initDatabase(): Promise<void> {
         "detail" TEXT,
         "context" TEXT NOT NULL,
         "status" TEXT NOT NULL DEFAULT 'pending',
-        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        "createdAt" ${timestampType} NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
@@ -27,8 +31,8 @@ export async function initDatabase(): Promise<void> {
         "id" TEXT NOT NULL PRIMARY KEY,
         "sessionId" TEXT NOT NULL,
         "reason" TEXT NOT NULL,
-        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "expiresAt" DATETIME
+        "createdAt" ${timestampType} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "expiresAt" ${timestampType}
       );
     `);
 
@@ -42,8 +46,8 @@ export async function initDatabase(): Promise<void> {
         "avatar" TEXT,
         "interests" TEXT,
         "bio" TEXT,
-        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        "createdAt" ${timestampType} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" ${timestampType} NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
@@ -53,7 +57,7 @@ export async function initDatabase(): Promise<void> {
         "userId" TEXT NOT NULL,
         "friendId" TEXT NOT NULL,
         "status" TEXT NOT NULL DEFAULT 'accepted',
-        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "createdAt" ${timestampType} NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "Friendship_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
         CONSTRAINT "Friendship_friendId_fkey" FOREIGN KEY ("friendId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
       );
@@ -68,8 +72,8 @@ export async function initDatabase(): Promise<void> {
         "user2Sid" TEXT,
         "user2Nick" TEXT,
         "isUsed" BOOLEAN NOT NULL DEFAULT false,
-        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "expiresAt" DATETIME NOT NULL
+        "createdAt" ${timestampType} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "expiresAt" ${timestampType} NOT NULL
       );
     `);
 
@@ -89,6 +93,9 @@ export async function initDatabase(): Promise<void> {
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ReconnectCode_user2Sid_idx" ON "ReconnectCode"("user2Sid");`);
 
     logger.info('Database schema verified and initialized successfully.');
+
+    // Hydrate active bans into memory so bans survive sleep cycles and query fast
+    await hydrateActiveBans();
   } catch (err) {
     logger.error('Failed to initialize database schema:', err);
   } finally {

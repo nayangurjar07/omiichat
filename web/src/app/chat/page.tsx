@@ -16,15 +16,23 @@ import { ChatInput } from '@/components/chat/ChatInput';
 import { ReportModal } from '@/components/chat/ReportModal';
 import { ReconnectModal } from '@/components/chat/ReconnectModal';
 import { ReportReason, ChatMessage, RoomMessage } from '@/types';
-import { saveLocalFriend } from '@/lib/friends';
 import { sounds } from '@/lib/sound';
-import {
-  pickPersonaForInterests,
-  generateAiReply,
-  getPersonaOpener,
-  AiPersona,
-} from '@/lib/aiCompanion';
-import { ShieldAlert, RefreshCw, Home, Sparkles, UserPlus, Check, AlertCircle } from 'lucide-react';
+import { ShieldAlert, RefreshCw, Home, Sparkles, UserPlus, Check, AlertCircle, FastForward } from 'lucide-react';
+
+const ICEBREAKER_STARTERS = [
+  "What song do you have on repeat right now?",
+  "Would you rather travel 100 years into the past or 100 years into the future?",
+  "What's the most underrated movie or show you've watched recently?",
+  "If you had to eat only one meal for the rest of your life, what would it be?",
+  "What's a weird rabbit hole you fell down on the internet lately?",
+  "Are you more productive at 7:00 AM or 11:00 PM?",
+  "Coffee, tea, or late-night cold water?",
+  "If you could teleport to any city right this second, where would you go?",
+  "What's one skill you wish you could master overnight without practicing?",
+  "What's the best concert or live event you've ever been to?",
+  "Do you prefer quiet late nights or sunny outdoor mornings?",
+  "What's a game, book, or album that changed your perspective?",
+];
 
 function ChatView() {
   const router = useRouter();
@@ -71,115 +79,64 @@ function ChatView() {
     type: 'success' | 'error' | 'info';
   } | null>(null);
   const [reportingMessage, setReportingMessage] = useState<ChatMessage | RoomMessage | null>(null);
+  const [activeIcebreaker, setActiveIcebreaker] = useState<string>('');
+  const [rematchCountdown, setRematchCountdown] = useState<number | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef(status);
-
-  // Stealth Stranger Fallback State (Zero AI Disclosure)
-  const [isAiMode, setIsAiMode] = useState(false);
-  const [aiPersona, setAiPersona] = useState<AiPersona | null>(null);
-  const [aiMessages, setAiMessages] = useState<ChatMessage[]>([]);
-  const [aiTyping, setAiTyping] = useState(false);
-  const aiTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const aiFollowUpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const greetingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
 
-  // Automated seamless instant matching: if queue search takes > 3.2s - 4.8s, connect smoothly
-  useEffect(() => {
-    if (status === 'searching' && !isAiMode) {
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-
-      const delay = 3200 + Math.random() * 1600;
-      searchTimerRef.current = setTimeout(() => {
-        const interests = getStoredInterests();
-        const persona = pickPersonaForInterests(interests);
-        setAiPersona(persona);
-        setIsAiMode(true);
-        setAiMessages([]);
-        setSimulatedFriendAccepted(false);
-        setIsFriendSent(false);
-        sounds.playMatchChime();
-
-        // Stranger starts typing after a natural human pause (~700ms - 1100ms)
-        const opener = getPersonaOpener(persona);
-        greetingTimerRef.current = setTimeout(() => {
-          setAiTyping(true);
-          greetingTimerRef.current = setTimeout(() => {
-            setAiTyping(false);
-            setAiMessages([
-              {
-                id: `msg-${Date.now()}`,
-                senderId: persona.id,
-                senderNick: persona.nickname,
-                text: opener.first,
-                timestamp: Date.now(),
-                isSelf: false,
-              },
-            ]);
-            sounds.playMessagePop();
-
-            // Optional 2nd message burst (e.g. "yo" then "where are u from?")
-            if (opener.second) {
-              greetingTimerRef.current = setTimeout(() => {
-                setAiTyping(true);
-                greetingTimerRef.current = setTimeout(() => {
-                  setAiTyping(false);
-                  setAiMessages((prev) => [
-                    ...prev,
-                    {
-                      id: `msg-${Date.now()}-2`,
-                      senderId: persona.id,
-                      senderNick: persona.nickname,
-                      text: opener.second!,
-                      timestamp: Date.now(),
-                      isSelf: false,
-                    },
-                  ]);
-                  sounds.playMessagePop();
-                }, 1300);
-              }, 750);
-            }
-          }, 1400);
-        }, 850);
-      }, delay);
-    } else {
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    }
-
-    return () => {
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-      if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current);
-    };
-  }, [status, isAiMode]);
-
-  // When a real human match arrives from server, seamlessly transition
-  useEffect(() => {
-    if (status === 'matched' && isAiMode) {
-      setIsAiMode(false);
-      setAiPersona(null);
-      setAiMessages([]);
-    }
-  }, [status, isAiMode]);
-
   useEffect(() => {
     if (status === 'matched') {
       setIsFriendSent(false);
       setSimulatedFriendAccepted(false);
+      const randomPrompt = ICEBREAKER_STARTERS[Math.floor(Math.random() * ICEBREAKER_STARTERS.length)];
+      setActiveIcebreaker(randomPrompt);
+      setRematchCountdown(null);
     }
   }, [status, partnerNickname]);
 
-  const activePartnerNickname = isAiMode ? (aiPersona?.nickname || 'Stranger') : partnerNickname;
+  // Flow Retention: When partner leaves, start 3-second countdown to automatically rematch
+  useEffect(() => {
+    if (status === 'partner_left') {
+      setRematchCountdown(3);
+    } else {
+      setRematchCountdown(null);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (rematchCountdown === null) return;
+    if (rematchCountdown <= 0) {
+      handleSkip();
+      return;
+    }
+    const timer = setTimeout(() => {
+      setRematchCountdown((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [rematchCountdown]);
+
+  // Desktop Global Escape Key to instantly skip
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handleSkip();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   const isAlreadyFriend =
     simulatedFriendAccepted ||
     friends.some(
       (f) =>
-        (activePartnerNickname && f.nickname.toLowerCase() === activePartnerNickname.toLowerCase()) ||
-        (aiPersona && f.id === aiPersona.id)
+        partnerNickname && f.nickname.toLowerCase() === partnerNickname.toLowerCase()
     );
 
   const friendState: 'none' | 'pending' | 'friend' = isAlreadyFriend
@@ -217,7 +174,7 @@ function ChatView() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, aiMessages, partnerTyping, aiTyping]);
+  }, [messages, partnerTyping]);
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -238,19 +195,7 @@ function ChatView() {
   }, [skip, leaveQueue]);
 
   const handleSkip = () => {
-    if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current);
-    if (aiTypingTimeoutRef.current) clearTimeout(aiTypingTimeoutRef.current);
-    if (aiFollowUpTimeoutRef.current) clearTimeout(aiFollowUpTimeoutRef.current);
-    setAiTyping(false);
-
-    if (isAiMode) {
-      setIsAiMode(false);
-      setAiPersona(null);
-      setAiMessages([]);
-      setSimulatedFriendAccepted(false);
-      setIsFriendSent(false);
-    }
-
+    setRematchCountdown(null);
     skip();
     const nick = getStoredNickname() || 'Anonymous';
     const interests = getStoredInterests();
@@ -259,84 +204,11 @@ function ChatView() {
   };
 
   const handleSendMessage = (text?: string, mediaUrl?: string, mediaType?: 'image' | 'audio') => {
-    if (isAiMode && aiPersona) {
-      const userMsg: ChatMessage = {
-        id: `user-${Date.now()}`,
-        senderId: 'self',
-        text: text || '',
-        mediaUrl,
-        mediaType,
-        timestamp: Date.now(),
-        isSelf: true,
-      };
-      setAiMessages((prev) => [...prev, userMsg]);
-
-      // Conversational history for contextual replies
-      const history = aiMessages.map((m) => ({
-        sender: m.isSelf ? ('user' as const) : ('ai' as const),
-        text: m.text || '',
-      }));
-
-      const { reply, typingDelayMs, followUpReply, followUpDelayMs } = generateAiReply(
-        text || '',
-        aiPersona,
-        history
-      );
-
-      if (aiTypingTimeoutRef.current) clearTimeout(aiTypingTimeoutRef.current);
-      if (aiFollowUpTimeoutRef.current) clearTimeout(aiFollowUpTimeoutRef.current);
-
-      // Natural pause before stranger starts typing (~500ms - 800ms)
-      aiTypingTimeoutRef.current = setTimeout(() => {
-        setAiTyping(true);
-
-        aiTypingTimeoutRef.current = setTimeout(() => {
-          setAiTyping(false);
-          setAiMessages((prev) => [
-            ...prev,
-            {
-              id: `msg-${Date.now()}`,
-              senderId: aiPersona.id,
-              senderNick: aiPersona.nickname,
-              text: reply,
-              timestamp: Date.now(),
-              isSelf: false,
-            },
-          ]);
-          sounds.playMessagePop();
-
-          // If followUpReply exists, trigger second bubble burst
-          if (followUpReply && followUpDelayMs) {
-            aiFollowUpTimeoutRef.current = setTimeout(() => {
-              setAiTyping(true);
-              aiFollowUpTimeoutRef.current = setTimeout(() => {
-                setAiTyping(false);
-                setAiMessages((prev) => [
-                  ...prev,
-                  {
-                    id: `msg-${Date.now()}-f`,
-                    senderId: aiPersona.id,
-                    senderNick: aiPersona.nickname,
-                    text: followUpReply,
-                    timestamp: Date.now(),
-                    isSelf: false,
-                  },
-                ]);
-                sounds.playMessagePop();
-              }, followUpDelayMs);
-            }, 650);
-          }
-        }, typingDelayMs);
-      }, 550);
-    } else {
-      sendMessage(text, mediaUrl, mediaType);
-    }
+    sendMessage(text, mediaUrl, mediaType);
   };
 
   const handleSendTyping = (isTyping: boolean) => {
-    if (!isAiMode) {
-      sendTyping(isTyping);
-    }
+    sendTyping(isTyping);
   };
 
   const handleBlock = () => {
@@ -354,37 +226,12 @@ function ChatView() {
   };
 
   const handleAddFriend = () => {
-    if (isAiMode && aiPersona) {
-      setIsFriendSent(true);
-      setLocalFriendFeedback({
-        type: 'info',
-        message: `Friend request sent to ${aiPersona.nickname}`,
-      });
-
-      // Reciprocate friend acceptance after 4.5s
-      setTimeout(() => {
-        saveLocalFriend({
-          id: aiPersona.id,
-          nickname: aiPersona.nickname,
-          avatar: aiPersona.avatar,
-          isOnline: true,
-        });
-        setSimulatedFriendAccepted(true);
-        setLocalFriendFeedback({
-          type: 'success',
-          message: `${aiPersona.nickname} accepted your friend request!`,
-        });
-        sounds.playMatchChime();
-        setTimeout(() => setLocalFriendFeedback(null), 4000);
-      }, 4500);
-      return;
-    }
-
     sendFriendRequest({});
     setIsFriendSent(true);
   };
 
   const handleLeave = () => {
+    setRematchCountdown(null);
     if (statusRef.current === 'matched') {
       skip();
     }
@@ -395,46 +242,42 @@ function ChatView() {
   // Banned state
   if (status === 'banned') {
     return (
-      <div className="min-h-screen bg-[var(--bg-paper)] flex flex-col items-center justify-center p-4">
-        <div className="max-w-md w-full p-8 rounded-xl bg-[var(--bg-surface)] border border-[var(--color-alert)]/40 shadow-sm text-center space-y-4">
-          <div className="w-12 h-12 mx-auto rounded-full bg-rose-500/10 text-[var(--color-alert)] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 font-mono">
+        <div className="max-w-md w-full p-8 rounded-lg bg-[#121212] border border-rose-500/40 text-center space-y-4">
+          <div className="w-12 h-12 mx-auto rounded-full bg-rose-500/10 text-rose-400 flex items-center justify-center">
             <ShieldAlert className="w-6 h-6" />
           </div>
-          <h1 className="font-display text-2xl font-bold text-[var(--text-ink)]">
-            Session suspended
+          <h1 className="text-xl font-bold text-white">
+            Session Suspended
           </h1>
-          <p className="text-sm text-[var(--text-muted)]">
+          <p className="text-xs text-zinc-400">
             {banReason || 'Your session has been suspended due to violations of community rules.'}
           </p>
           <button
             type="button"
             onClick={() => router.push('/rules')}
-            className="w-full py-2.5 text-xs font-semibold rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--border-line)] text-[var(--text-ink)] transition-colors cursor-pointer"
+            className="w-full py-2.5 text-xs font-semibold rounded bg-[#1c1c1f] hover:bg-[#27272a] text-zinc-200 border border-[#27272a] transition-colors cursor-pointer"
           >
-            Review rules
+            Review community rules
           </button>
         </div>
       </div>
     );
   }
 
-  const activeStatus = isAiMode ? 'matched' : status;
-  const activeMessages = isAiMode ? aiMessages : messages;
-  const activePartnerTyping = isAiMode ? aiTyping : partnerTyping;
-
   return (
-    <div className="flex flex-col h-[100dvh] bg-[var(--bg-paper)] text-[var(--text-ink)] transition-colors overflow-hidden">
+    <div className="flex flex-col h-[100dvh] bg-[#0a0a0a] text-zinc-100 transition-colors overflow-hidden font-sans">
       <Navbar inChat={true} isConnected={isConnected} onRetryConnection={retryConnection} />
 
       {/* Disconnection Warning Banner */}
-      {!isConnected && !isAiMode && (
-        <div className="bg-[var(--bg-subtle)] border-b border-[var(--border-line)] px-4 py-2 text-xs text-center flex items-center justify-center gap-2">
-          <AlertCircle className="w-3.5 h-3.5 text-[var(--color-alert)] shrink-0" />
-          <span>Can't reach the server. Check your connection, then try again.</span>
+      {!isConnected && (
+        <div className="bg-[#18181b] border-b border-rose-500/30 px-4 py-2 text-xs font-mono text-center flex items-center justify-center gap-2 text-rose-400">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>Cannot reach server. Retrying connection...</span>
           <button
             type="button"
             onClick={retryConnection}
-            className="font-semibold text-[var(--accent-dial)] hover:underline cursor-pointer"
+            className="font-bold text-white underline cursor-pointer"
           >
             Retry
           </button>
@@ -443,19 +286,19 @@ function ChatView() {
 
       {/* Rate limit & general errors */}
       {(errorMessage || rateLimitedNotice) && (
-        <div className="bg-[var(--color-alert)] text-white text-xs font-medium px-4 py-2 flex items-center justify-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="bg-rose-950/80 border-b border-rose-500/40 text-rose-200 text-xs font-mono px-4 py-2 flex items-center justify-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
           <span>{rateLimitedNotice || errorMessage}</span>
         </div>
       )}
 
-      {/* Calm Wide Column Chat Container */}
+      {/* Main Terminal Chat Container */}
       <div className="flex-1 flex flex-col min-h-0 w-full max-w-3xl mx-auto">
-        {/* Switchboard Chat Header (100% Identical to human chat) */}
+        {/* Switchboard Chat Header */}
         <StatusBar
-          status={activeStatus}
-          partnerNickname={activePartnerNickname}
-          sharedInterests={isAiMode && aiPersona ? aiPersona.interests : sharedInterests}
+          status={status}
+          partnerNickname={partnerNickname}
+          sharedInterests={sharedInterests}
           isConnected={isConnected}
           onSkip={handleSkip}
           onBlock={handleBlock}
@@ -466,19 +309,36 @@ function ChatView() {
           friendState={friendState}
         />
 
-        {/* Active In-Chat Mutual Friend Request Banner (for server requests) */}
+        {/* Task 4: Automated Icebreaker Banner at top of new chat */}
+        {status === 'matched' && activeIcebreaker && messages.length <= 2 && (
+          <div className="mx-4 mt-2 px-3 py-2 rounded bg-[#161618] border border-[#27272a] flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono text-xs animate-in fade-in">
+            <div className="flex items-center gap-2 text-zinc-300 min-w-0">
+              <span className="text-emerald-400 font-bold shrink-0">[Prompt]</span>
+              <span className="text-zinc-200 truncate">{activeIcebreaker}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleSendMessage(activeIcebreaker)}
+              className="self-end sm:self-auto px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] font-semibold border border-zinc-700 transition-colors cursor-pointer shrink-0"
+            >
+              Ask &rarr;
+            </button>
+          </div>
+        )}
+
+        {/* Active Friend Request Banner */}
         {activePartnerFriendRequest && (
-          <div className="mx-4 mt-2.5 p-3 rounded-xl bg-[var(--bg-surface)] border border-emerald-500/30 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+          <div className="mx-4 mt-2 p-3 rounded bg-[#161618] border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="text-2xl p-1.5 rounded-lg bg-[var(--bg-subtle)] shrink-0">
+              <span className="text-xl p-1 rounded bg-[#1f1f23] shrink-0">
                 {activePartnerFriendRequest.fromAvatar || '🦊'}
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-[var(--text-ink)] truncate">
+                <p className="font-semibold text-white truncate">
                   {activePartnerFriendRequest.fromNickname || partnerNickname || 'Stranger'} sent you a friend request
                 </p>
-                <p className="text-[11px] text-[var(--text-muted)]">
-                  Only if you accept will you become friends and see live online / last seen status.
+                <p className="text-[11px] text-zinc-400">
+                  Accept to stay connected and see live online status.
                 </p>
               </div>
             </div>
@@ -486,14 +346,14 @@ function ChatView() {
               <button
                 type="button"
                 onClick={() => respondFriendRequest(activePartnerFriendRequest.id, true)}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--color-success)] hover:opacity-90 text-white transition-opacity cursor-pointer shadow-xs"
+                className="px-3 py-1 rounded text-xs font-bold bg-white text-black hover:bg-zinc-200 transition-colors cursor-pointer"
               >
                 Accept
               </button>
               <button
                 type="button"
                 onClick={() => respondFriendRequest(activePartnerFriendRequest.id, false)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+                className="px-3 py-1 rounded text-xs text-zinc-400 hover:text-white bg-[#1f1f23] hover:bg-[#27272a] border border-[#27272a] transition-colors cursor-pointer"
               >
                 Decline
               </button>
@@ -504,12 +364,12 @@ function ChatView() {
         {/* Friend Request Toast Feedback */}
         {(friendRequestFeedback || localFriendFeedback) && (
           <div
-            className={`mx-4 mt-2 px-3.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between gap-2 animate-in fade-in ${
+            className={`mx-4 mt-2 px-3 py-2 rounded text-xs font-mono flex items-center justify-between gap-2 ${
               (friendRequestFeedback?.type || localFriendFeedback?.type) === 'success'
-                ? 'bg-emerald-500/10 text-[var(--color-success)] border border-emerald-500/20'
+                ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/30'
                 : (friendRequestFeedback?.type || localFriendFeedback?.type) === 'error'
-                ? 'bg-rose-500/10 text-[var(--color-alert)] border border-rose-500/20'
-                : 'bg-[var(--bg-subtle)] text-[var(--text-ink)] border border-[var(--border-line)]'
+                ? 'bg-rose-950/40 text-rose-300 border border-rose-500/30'
+                : 'bg-[#18181b] text-zinc-200 border border-[#27272a]'
             }`}
           >
             <span>{localFriendFeedback?.message || friendRequestFeedback?.message}</span>
@@ -517,43 +377,56 @@ function ChatView() {
         )}
 
         {/* Messages and State Area */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 space-y-1">
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 sm:px-6 space-y-1">
           {/* SEARCHING STATE */}
-          {activeStatus === 'searching' && (
-            <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-5">
-              <div className="space-y-2 max-w-sm">
-                <h2 className="font-display text-2xl font-bold text-[var(--text-ink)] tracking-tight">
-                  {reconnectQuery ? 'Reconnecting...' : 'Finding someone...'}
+          {status === 'searching' && (
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 font-mono">
+              <div className="space-y-1.5 max-w-sm">
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-[#141414] border border-[#27272a] text-xs text-zinc-400 mb-2">
+                  <span className="w-2 h-2 rounded-full bg-zinc-400 animate-pulse" />
+                  <span>Searching switchboard</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                  {reconnectQuery ? 'Reconnecting...' : 'Connecting to a stranger...'}
                 </h2>
-                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                <p className="text-xs text-zinc-500 leading-relaxed">
                   {reconnectQuery
                     ? 'Waiting for your partner to redeem the reconnect code.'
-                    : 'The line is searching for an available stranger with matching interests.'}
+                    : 'Searching for available partners with matching interests. (Fallback in 4s)'}
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="pt-2">
                 <button
                   type="button"
                   onClick={handleLeave}
-                  className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] border border-[var(--border-line)] rounded-lg transition-all duration-200 cursor-pointer active:scale-95 inline-flex items-center gap-1.5 shadow-xs"
+                  className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white bg-[#141414] hover:bg-[#1f1f23] border border-[#27272a] rounded transition-colors cursor-pointer inline-flex items-center gap-1.5"
                 >
-                  <Home className="w-3.5 h-3.5 text-[var(--accent-dial)]" />
+                  <Home className="w-3.5 h-3.5" />
                   <span>Return Home</span>
                 </button>
               </div>
             </div>
           )}
 
-          {/* PARTNER LEFT STATE */}
-          {activeStatus === 'partner_left' && (
-            <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
-              <div className="space-y-1 max-w-sm">
-                <h2 className="font-display text-xl font-bold text-[var(--text-ink)]">
-                  Stranger left the line
+          {/* Task 5: PARTNER LEFT STATE WITH AUTOMATED COUNTDOWN FLOW RETENTION */}
+          {status === 'partner_left' && (
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 font-mono">
+              <div className="space-y-2 max-w-sm">
+                <span className="inline-block px-2.5 py-0.5 rounded text-[10px] uppercase font-bold text-rose-400 bg-rose-950/40 border border-rose-500/30">
+                  Partner Disconnected
+                </span>
+                <h2 className="text-xl font-bold text-white">
+                  Stranger left the chat
                 </h2>
-                <p className="text-xs text-[var(--text-muted)]">
-                  The conversation has ended. You can find someone new or trade a reconnect code.
+                <p className="text-xs text-zinc-400">
+                  {rematchCountdown !== null && rematchCountdown > 0 ? (
+                    <>
+                      Rematching automatically in <span className="font-bold text-emerald-400 text-sm">{rematchCountdown}s</span>...
+                    </>
+                  ) : (
+                    'Searching for next match now...'
+                  )}
                 </p>
               </div>
 
@@ -561,76 +434,52 @@ function ChatView() {
                 <button
                   type="button"
                   onClick={handleSkip}
-                  className="px-5 py-2.5 rounded-lg text-xs font-semibold bg-[var(--accent-dial)] hover:bg-[var(--accent-dial-hover)] text-white shadow-xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                  className="h-10 px-5 rounded bg-white hover:bg-zinc-200 text-black font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Find someone</span>
+                  <FastForward className="w-3.5 h-3.5 fill-black" />
+                  <span>Match Now (Instant)</span>
                 </button>
+
+                {rematchCountdown !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setRematchCountdown(null)}
+                    className="h-10 px-3.5 rounded bg-[#18181b] hover:bg-[#27272a] text-zinc-400 hover:text-white border border-[#27272a] text-xs transition-colors cursor-pointer"
+                  >
+                    Pause Auto-Match
+                  </button>
+                )}
 
                 <button
                   type="button"
-                  onClick={() => requestReconnect()}
-                  className="px-4 py-2.5 rounded-lg text-xs font-semibold bg-[var(--bg-surface)] hover:bg-[var(--bg-subtle)] text-[var(--text-ink)] border border-[var(--border-line)] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                  onClick={() => {
+                    setRematchCountdown(null);
+                    requestReconnect();
+                  }}
+                  className="h-10 px-3.5 rounded bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white border border-[#27272a] text-xs transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-[var(--accent-dial)]" />
-                  <span>Trade reconnect code</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleAddFriend}
-                  disabled={friendState !== 'none'}
-                  className={`px-4 py-2.5 rounded-lg text-xs font-semibold border transition-colors inline-flex items-center gap-1.5 ${
-                    friendState === 'friend'
-                      ? 'bg-emerald-500/10 text-[var(--color-success)] border-emerald-500/30 cursor-default'
-                      : friendState === 'pending'
-                      ? 'bg-amber-500/10 text-amber-500 border-amber-500/30 cursor-default'
-                      : 'bg-[var(--bg-surface)] hover:bg-[var(--bg-subtle)] text-[var(--text-ink)] border-[var(--border-line)] cursor-pointer'
-                  }`}
-                >
-                  {friendState === 'friend' ? (
-                    <Check className="w-3.5 h-3.5 text-[var(--color-success)]" />
-                  ) : friendState === 'pending' ? (
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-                  ) : (
-                    <UserPlus className="w-3.5 h-3.5" />
-                  )}
-                  <span>
-                    {friendState === 'friend'
-                      ? 'Mutual friends'
-                      : friendState === 'pending'
-                      ? 'Request sent'
-                      : `Add ${activePartnerNickname || 'Stranger'}`}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleLeave}
-                  className="px-4 py-2.5 rounded-lg text-xs font-semibold bg-[var(--bg-surface)] hover:bg-[var(--bg-subtle)] text-[var(--text-ink)] border border-[var(--border-line)] transition-all duration-200 cursor-pointer inline-flex items-center gap-1.5 active:scale-95 shadow-xs"
-                >
-                  <Home className="w-3.5 h-3.5 text-[var(--accent-dial)]" />
-                  <span>Home</span>
+                  <Sparkles className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Trade Reconnect Code</span>
                 </button>
               </div>
             </div>
           )}
 
           {/* MATCHED ACTIVE CONVERSATION */}
-          {activeStatus === 'matched' && (
+          {status === 'matched' && (
             <>
-              {activeMessages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-1 text-[var(--text-muted)] select-none">
-                  <p className="text-sm font-semibold text-[var(--text-ink)]">
-                    Connected with {activePartnerNickname || 'Stranger'}
+              {messages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2 text-zinc-500 font-mono select-none">
+                  <p className="text-sm font-bold text-white">
+                    Connected with {partnerNickname || 'Stranger'}
                   </p>
-                  <p className="text-xs">
-                    Say hello, send a photo, or record a voice note.
+                  <p className="text-xs text-zinc-500">
+                    Type a message, ask the icebreaker prompt above, or send a voice note.
                   </p>
                 </div>
               ) : (
-                activeMessages.map((msg, index) => {
-                  const prevMsg = index > 0 ? activeMessages[index - 1] : null;
+                messages.map((msg, index) => {
+                  const prevMsg = index > 0 ? messages[index - 1] : null;
                   const isConsecutive =
                     !!prevMsg &&
                     prevMsg.senderId === msg.senderId &&
@@ -642,7 +491,7 @@ function ChatView() {
                     <MessageBubble
                       key={msg.id}
                       message={msg}
-                      partnerNickname={activePartnerNickname}
+                      partnerNickname={partnerNickname}
                       isConsecutive={isConsecutive}
                       onReportMessage={handleReportMessage}
                     />
@@ -650,22 +499,22 @@ function ChatView() {
                 })
               )}
 
-              {activePartnerTyping && <TypingIndicator partnerNickname={activePartnerNickname} />}
+              {partnerTyping && <TypingIndicator partnerNickname={partnerNickname} />}
               <div ref={messagesEndRef} />
             </>
           )}
         </div>
 
-        {/* Input Bar */}
+        {/* Input Bar with Instant Keyboard Esc & Mobile Skip */}
         <ChatInput
           onSendMessage={handleSendMessage}
           onTyping={handleSendTyping}
-          onDoubleEsc={handleSkip}
-          disabled={activeStatus !== 'matched'}
+          onSkip={handleSkip}
+          disabled={status !== 'matched'}
           placeholder={
-            activeStatus === 'matched'
-              ? 'Message... (Enter to send, Esc twice to skip)'
-              : activeStatus === 'searching'
+            status === 'matched'
+              ? 'Type a message... (Enter to send, Esc to skip)'
+              : status === 'searching'
               ? 'Connecting to the line...'
               : 'Conversation ended'
           }
@@ -680,7 +529,7 @@ function ChatView() {
           setReportingMessage(null);
         }}
         onSubmit={handleReportSubmit}
-        partnerNickname={reportingMessage?.senderNick || activePartnerNickname}
+        partnerNickname={reportingMessage?.senderNick || partnerNickname}
       />
 
       {/* Reconnect Modal */}
@@ -697,8 +546,8 @@ export default function ChatPage() {
   return (
     <Suspense
       fallback={
-        <div className="h-[100dvh] flex items-center justify-center bg-[var(--bg-paper)] text-[var(--text-muted)] text-sm font-body">
-          Loading conversation...
+        <div className="h-[100dvh] flex items-center justify-center bg-[#0a0a0a] text-zinc-500 text-xs font-mono">
+          Loading line...
         </div>
       }
     >

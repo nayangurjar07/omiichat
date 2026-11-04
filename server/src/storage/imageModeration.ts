@@ -9,6 +9,20 @@ export interface ModerationResult {
 }
 
 /**
+ * Validates magic-byte signatures for allowed media (JPEG, PNG, WebP, OGG, WebM).
+ * Explicitly rejects SVG, executables, HTML, and spoofed files.
+ */
+export function hasValidMediaSignature(buffer: Buffer): boolean {
+  if (!buffer || buffer.length < 12) return false;
+  const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
+  const isWebp = buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP';
+  const isOgg = buffer.toString('ascii', 0, 4) === 'OggS';
+  const isWebm = buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3;
+  return isJpeg || isPng || isWebp || isOgg || isWebm;
+}
+
+/**
  * Image moderation hook.
  *
  * Developers can wire this function to external AI/Vision services like:
@@ -31,7 +45,17 @@ export async function moderateImage(
       return { approved: false, flagged: true, reason: 'Empty image payload' };
     }
 
-    // 2. Validate magic bytes to prevent file extension spoofing
+    // 2. Validate magic bytes to prevent file extension spoofing and reject SVG/executables
+    if (!hasValidMediaSignature(buffer)) {
+      logger.warn(`Media buffer failed valid media signature check for claimed mime: ${mimeType}`);
+      return {
+        approved: false,
+        flagged: true,
+        reason: 'Invalid file signature. SVG, HTML, executable, and unknown file types are rejected.',
+      };
+    }
+
+    // 3. Verify specific format match
     const isValidMagic = validateMagicBytes(buffer, mimeType);
     if (!isValidMagic) {
       logger.warn(`Image failed magic byte validation for mime: ${mimeType}`);
@@ -42,7 +66,7 @@ export async function moderateImage(
       };
     }
 
-    // 3. Check for external moderation hook configuration
+    // 4. Check for external moderation hook configuration
     const moderationApiUrl = process.env.IMAGE_MODERATION_API_URL;
     if (moderationApiUrl) {
       try {
@@ -73,7 +97,7 @@ export async function moderateImage(
       }
     }
 
-    // 4. Default baseline check: passes validation
+    // 5. Default baseline check: passes validation
     return {
       approved: true,
       flagged: false,

@@ -15,6 +15,7 @@ import {
   X,
   User as UserIcon,
   Home,
+  Radio,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -56,37 +57,40 @@ export function Navbar({
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-[var(--bg-paper)]/95 backdrop-blur-md border-b border-[var(--border-line)] transition-colors">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
-          {/* Brand Wordmark */}
-          <Link href="/" className="flex items-baseline gap-2 shrink-0 group">
-            <span className="font-display font-extrabold text-xl sm:text-2xl tracking-tight text-[var(--text-ink)] select-none">
-              omii
-            </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-dial)] inline-block mb-1 group-hover:scale-125 transition-transform" />
-          </Link>
+      <header className="sticky top-0 z-40 w-full bg-[#0a0a0a] border-b border-[#27272a]">
+        <div className="max-w-5xl mx-auto px-4 h-13 flex items-center justify-between gap-3">
+          {/* Brand Wordmark - Crisp Terminal Font */}
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-2 shrink-0 group">
+              <span className="font-mono font-bold text-lg tracking-tight text-white select-none">
+                omii<span className="text-zinc-500">.chat</span>
+              </span>
+            </Link>
 
-          {/* Connection Pill */}
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--bg-subtle)] border border-[var(--border-line)] text-xs text-[var(--text-muted)]">
-            <span
-              className={`w-2 h-2 rounded-full shrink-0 ${
-                isConnected
-                  ? 'bg-[var(--color-success)]'
-                  : 'bg-[var(--color-alert)] animate-pulse'
-              }`}
-            />
-            <span className="font-medium text-[11px] sm:text-xs">
-              {isConnected ? 'Connected' : 'Disconnected'}
-            </span>
-            {!isConnected && onRetryConnection && (
-              <button
-                type="button"
-                onClick={onRetryConnection}
-                className="ml-1 text-[11px] font-semibold text-[var(--accent-dial)] hover:underline cursor-pointer"
-              >
-                Retry
-              </button>
-            )}
+            {/* Live Online Count or Status Pill */}
+            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded bg-[#141414] border border-[#27272a] text-xs font-mono">
+              <span
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                  isConnected ? 'bg-emerald-400' : 'bg-rose-500 animate-pulse'
+                }`}
+              />
+              <span className="text-zinc-400 text-[11px]">
+                {isConnected
+                  ? onlineCount > 0
+                    ? `${onlineCount.toLocaleString()} online`
+                    : 'connected'
+                  : 'disconnected'}
+              </span>
+              {!isConnected && onRetryConnection && (
+                <button
+                  type="button"
+                  onClick={onRetryConnection}
+                  className="text-[11px] font-semibold text-white underline hover:text-zinc-300 cursor-pointer"
+                >
+                  retry
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Right Navigation */}
@@ -94,45 +98,45 @@ export function Navbar({
             {inChat && (
               <Link
                 href="/"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] border border-[var(--border-line)] transition-all duration-200 active:scale-95 mr-1"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#18181b] hover:bg-[#27272a] text-xs font-mono text-zinc-300 hover:text-white border border-[#27272a] transition-colors"
                 title="Return to home page"
               >
-                <Home className="w-3.5 h-3.5 text-[var(--accent-dial)]" />
+                <Home className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Home</span>
               </Link>
             )}
 
             {!inChat && (
-              <nav className="hidden md:flex items-center gap-5 text-xs font-medium text-[var(--text-muted)] mr-2">
+              <nav className="hidden md:flex items-center gap-4 text-xs font-mono text-zinc-400">
                 <Link
                   href="/chat"
-                  className="hover:text-[var(--text-ink)] transition-colors"
+                  className="px-2 py-1 rounded hover:text-white transition-colors"
                 >
-                  Start chat
+                  [Chat]
                 </Link>
                 <Link
                   href="/rooms"
-                  className="hover:text-[var(--text-ink)] transition-colors"
+                  className="px-2 py-1 rounded hover:text-white transition-colors"
                 >
-                  Topic rooms
+                  [Rooms]
                 </Link>
                 <button
                   type="button"
                   onClick={() => setIsFriendsOpen(true)}
-                  className="relative hover:text-[var(--text-ink)] transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="relative px-2 py-1 rounded hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  <span>Friends</span>
+                  <span>[Friends]</span>
                   {pendingReqCount > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-500 text-white text-[10px] font-bold animate-pulse">
+                    <span className="px-1.5 py-0.2 rounded bg-emerald-500 text-black text-[10px] font-bold">
                       {pendingReqCount}
                     </span>
                   )}
                 </button>
                 <Link
                   href="/rules"
-                  className="hover:text-[var(--text-ink)] transition-colors"
+                  className="px-2 py-1 rounded hover:text-white transition-colors"
                 >
-                  Rules
+                  [Rules]
                 </Link>
               </nav>
             )}
@@ -142,18 +146,18 @@ export function Navbar({
               <button
                 type="button"
                 onClick={() => setIsProfileOpen(true)}
-                className="min-h-[44px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--bg-subtle)] hover:bg-[var(--border-line)] text-[var(--text-ink)] border border-[var(--border-line)] transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-[#18181b] hover:bg-[#27272a] text-xs font-mono text-white border border-[#27272a] transition-colors cursor-pointer"
               >
-                <UserIcon className="w-3.5 h-3.5 text-[var(--accent-dial)]" />
-                <span className="truncate max-w-[90px]">{currentUser.nickname}</span>
+                <UserIcon className="w-3 h-3 text-zinc-400" />
+                <span className="truncate max-w-[80px]">{currentUser.nickname}</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => setIsAuthOpen(true)}
-                className="min-h-[44px] hidden sm:inline-flex items-center px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent-dial)] hover:opacity-90 text-white transition-opacity cursor-pointer"
+                className="hidden sm:inline-flex items-center px-3 py-1.5 rounded text-xs font-mono bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 transition-colors cursor-pointer"
               >
-                Account
+                Sign In
               </button>
             )}
 
@@ -166,9 +170,9 @@ export function Navbar({
                 type="button"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
-                className="md:hidden min-w-[44px] min-h-[44px] inline-flex items-center justify-center p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-ink)] bg-[var(--bg-subtle)] hover:bg-[var(--border-line)] transition-colors cursor-pointer"
+                className="md:hidden inline-flex items-center justify-center p-2 rounded text-zinc-400 hover:text-white bg-[#141414] border border-[#27272a] cursor-pointer"
               >
-                {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
               </button>
             )}
           </div>
@@ -176,20 +180,20 @@ export function Navbar({
 
         {/* Mobile Navigation Drawer */}
         {isMobileMenuOpen && !inChat && (
-          <div className="md:hidden border-t border-[var(--border-line)] bg-[var(--bg-surface)] px-4 py-4 space-y-3">
+          <div className="md:hidden border-t border-[#27272a] bg-[#0d0d0d] px-4 py-3 space-y-2 font-mono text-xs">
             <Link
               href="/chat"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="block py-2 text-sm font-medium text-[var(--text-ink)] hover:text-[var(--accent-dial)]"
+              className="block py-2 text-zinc-200 hover:text-white"
             >
-              Start chat
+              &gt; Start chat
             </Link>
             <Link
               href="/rooms"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="block py-2 text-sm font-medium text-[var(--text-ink)] hover:text-[var(--accent-dial)]"
+              className="block py-2 text-zinc-200 hover:text-white"
             >
-              Topic rooms
+              &gt; Topic rooms
             </Link>
             <button
               type="button"
@@ -197,11 +201,11 @@ export function Navbar({
                 setIsMobileMenuOpen(false);
                 setIsFriendsOpen(true);
               }}
-              className="w-full text-left py-2 text-sm font-medium text-[var(--text-ink)] hover:text-[var(--accent-dial)] cursor-pointer flex items-center justify-between"
+              className="w-full text-left py-2 text-zinc-200 hover:text-white cursor-pointer flex items-center justify-between"
             >
-              <span>Friends</span>
+              <span>&gt; Friends</span>
               {pendingReqCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold">
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-black text-[10px] font-bold">
                   {pendingReqCount} new
                 </span>
               )}
@@ -209,9 +213,9 @@ export function Navbar({
             <Link
               href="/rules"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="block py-2 text-sm font-medium text-[var(--text-ink)] hover:text-[var(--accent-dial)]"
+              className="block py-2 text-zinc-200 hover:text-white"
             >
-              Rules & Safety
+              &gt; Rules & Safety
             </Link>
             {!currentUser && (
               <button
@@ -220,7 +224,7 @@ export function Navbar({
                   setIsMobileMenuOpen(false);
                   setIsAuthOpen(true);
                 }}
-                className="w-full mt-2 py-2.5 rounded-lg text-center text-sm font-semibold bg-[var(--accent-dial)] text-white"
+                className="w-full mt-2 py-2 rounded text-center text-xs font-bold bg-white text-black hover:bg-zinc-200 transition-colors"
               >
                 Sign in / Register
               </button>

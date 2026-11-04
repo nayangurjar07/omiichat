@@ -16,12 +16,19 @@ import { IMatchingQueue, QueueUser, MatchResult } from '../matching/types';
 import { Matcher } from '../matching/matcher';
 import { RateLimiter } from '../safety/rateLimiter';
 import { filterProfanity } from '../safety/profanityFilter';
-import { sanitizeMessage, sanitizeNickname } from '../utils/sanitize';
+import { sanitizeMessage, sanitizeNickname, sanitizeInput } from '../utils/sanitize';
 import { createReport, CreateReportInput } from '../safety/reportService';
 import { isBanned, checkAutoBan } from '../safety/banService';
 import { RoomManager, ChatRoomInstance } from '../rooms/RoomManager';
 import { createOrGetReconnectCode, verifyReconnectCode } from '../reconnect/reconnectService';
 import { logger } from '../utils/logger';
+import {
+  BotPersona,
+  BOT_PERSONAS,
+  pickBotPersona,
+  calculateTypingDelay,
+  generateBotReplies,
+} from '../bot/botEngine';
 
 // ─── 1-to-1 Chat Interfaces ──────────────────────────────────────────
 
@@ -52,6 +59,41 @@ const socketToNickname = new Map<string, string>();
 const sessionToSocket = new Map<string, string>();
 const sessionBlockList = new Map<string, Set<string>>();
 const rateLimiter = new RateLimiter();
+const socketToIp = new Map<string, string>();
+
+// ─── Active Server-Side Bot Sessions ─────────────────────────────────
+export interface ActiveBotSession {
+  humanSocketId: string;
+  humanSessionId: string;
+  botSocketId: string;
+  botSessionId: string;
+  persona: BotPersona;
+  roomId: string;
+  history: { sender: 'user' | 'bot'; text: string }[];
+  timers: Set<NodeJS.Timeout>;
+}
+
+const activeBotSessions = new Map<string, ActiveBotSession>();
+
+function dropBotSession(humanSocketId: string): void {
+  const botSession = activeBotSessions.get(humanSocketId);
+  if (!botSession) return;
+  for (const timer of botSession.timers) {
+    clearTimeout(timer);
+  }
+  botSession.timers.clear();
+  activeBotSessions.delete(humanSocketId);
+  socketToRoom.delete(humanSocketId);
+  socketToRoom.delete(botSession.botSocketId);
+  rooms.delete(botSession.roomId);
+}
+
+export function getSocketClientIp(socket: Socket): string {
+  const rawForwarded = socket.handshake.headers['x-forwarded-for'];
+  return typeof rawForwarded === 'string'
+    ? rawForwarded.split(',')[0].trim()
+    : (socket.handshake.address || 'unknown');
+}
 
 // Socket to Room ID mapping for public/private topic rooms
 const socketToTopicRoom = new Map<string, string>();
@@ -115,22 +157,270 @@ function broadcastRoomList(io: Server): void {
 }
 
 /** Clean up a 1-to-1 room and notify the partner that the other person left */
-function cleanupRoom(io: Server, roomId: string, leavingSocketId: string): void {
+function cleanupRoom(io: Server, roomId: string, leavingSocketId: string, matcher?: Matcher): void {
   const room = rooms.get(roomId);
   if (!room) return;
 
   const partnerSocketId = getPartnerSocketId(roomId, leavingSocketId);
   if (partnerSocketId) {
-    io.to(partnerSocketId).emit(EVENTS.PARTNER_LEFT);
+    if (activeBotSessions.has(partnerSocketId)) {
+      if (matcher) {
+        matcher.dropBot(partnerSocketId);
+      } else {
+        dropBotSession(partnerSocketId);
+      }
+    }
+    // Only emit partner_left if partner is not a virtual bot
+    if (!partnerSocketId.startsWith('bot_sock_')) {
+      io.to(partnerSocketId).emit(EVENTS.PARTNER_LEFT);
+    }
     socketToRoom.delete(partnerSocketId);
+  }
+
+  if (activeBotSessions.has(leavingSocketId)) {
+    if (matcher) {
+      matcher.dropBot(leavingSocketId);
+    } else {
+      dropBotSession(leavingSocketId);
+    }
   }
 
   socketToRoom.delete(leavingSocketId);
   rooms.delete(roomId);
 }
 
-/** Handle a successful 1-to-1 match — create room and notify both users */
-function handleMatch(io: Server, match: MatchResult): void {
+/** Schedule natural bot greeting opener if human user does not message first */
+function scheduleBotOpener(io: Server, botSession: ActiveBotSession, room: ChatRoom): void {
+  const persona = botSession.persona;
+  const openers = persona.openers;
+  const picked = openers[Math.floor(Math.random() * openers.length)] || { first: "hey! what's up" };
+  const initialDelay = 1200 + Math.random() * 800; // 1.2s - 2.0s human pause
+
+  const openerTimer = setTimeout(() => {
+    botSession.timers.delete(openerTimer);
+
+    // Emit typing indicator
+    io.to(botSession.humanSocketId).emit(EVENTS.PARTNER_TYPING, { isTyping: true });
+    io.to(botSession.humanSocketId).emit('typing:start');
+
+    const typingDuration1 = calculateTypingDelay(picked.first);
+    const typingTimer1 = setTimeout(() => {
+      botSession.timers.delete(typingTimer1);
+      io.to(botSession.humanSocketId).emit(EVENTS.PARTNER_TYPING, { isTyping: false });
+      io.to(botSession.humanSocketId).emit('typing:stop');
+
+      const msg1: MessagePayload = {
+        id: `msg_${Date.now()}_${uuidv4().slice(0, 6)}`,
+        senderId: botSession.botSocketId,
+        senderNick: persona.nickname,
+        text: picked.first,
+        timestamp: Date.now(),
+      };
+      room.messages.push(msg1);
+      botSession.history.push({ sender: 'bot', text: picked.first });
+      io.to(botSession.humanSocketId).emit(EVENTS.MESSAGE, msg1);
+
+      if (picked.second) {
+        const bubbleGap = 600 + Math.random() * 400; // 600-1000ms pause
+        const gapTimer = setTimeout(() => {
+          botSession.timers.delete(gapTimer);
+          io.to(botSession.humanSocketId).emit(EVENTS.PARTNER_TYPING, { isTyping: true });
+          io.to(botSession.humanSocketId).emit('typing:start');
+
+          const typingDuration2 = calculateTypingDelay(picked.second!);
+          const typingTimer2 = setTimeout(() => {
+            botSession.timers.delete(typingTimer2);
+            io.to(botSession.humanSocketId).emit(EVENTS.PARTNER_TYPING, { isTyping: false });
+            io.to(botSession.humanSocketId).emit('typing:stop');
+
+            const msg2: MessagePayload = {
+              id: `msg_${Date.now()}_${uuidv4().slice(0, 6)}`,
+              senderId: botSession.botSocketId,
+              senderNick: persona.nickname,
+              text: picked.second,
+              timestamp: Date.now(),
+            };
+            room.messages.push(msg2);
+            botSession.history.push({ sender: 'bot', text: picked.second! });
+            io.to(botSession.humanSocketId).emit(EVENTS.MESSAGE, msg2);
+          }, typingDuration2);
+
+          botSession.timers.add(typingTimer2);
+        }, bubbleGap);
+
+        botSession.timers.add(gapTimer);
+      }
+    }, typingDuration1);
+
+    botSession.timers.add(typingTimer1);
+  }, initialDelay);
+
+  botSession.timers.add(openerTimer);
+}
+
+/**
+ * Handle incoming user message when chatting with a server-side bot.
+ * Mimics authentic human texting behavior:
+ * - Reading Delay: 1.5 - 2.5s
+ * - Typing Indicator duration based on response length
+ * - Multi-Bubble Splitting: 2 short lowercase messages sent sequentially
+ */
+function handleBotMessageResponse(
+  io: Server,
+  socket: Socket,
+  botSession: ActiveBotSession,
+  userText: string
+): void {
+  // Clear any existing bot timers (e.g. pending opener)
+  for (const timer of botSession.timers) {
+    clearTimeout(timer);
+  }
+  botSession.timers.clear();
+  io.to(socket.id).emit(EVENTS.PARTNER_TYPING, { isTyping: false });
+  io.to(socket.id).emit('typing:stop');
+
+  botSession.history.push({ sender: 'user', text: userText });
+
+  // 1. Reading Delay: Wait 1.5 to 2.5 seconds after user sends message before bot reacts
+  const readingDelay = 1500 + Math.random() * 1000;
+
+  const readingTimer = setTimeout(() => {
+    botSession.timers.delete(readingTimer);
+
+    // Generate 2 short, lowercase messages with casual slang, occasional typos, and hooks
+    const { bubble1, bubble2 } = generateBotReplies(userText, botSession.persona, botSession.history);
+
+    // 2. Typing Indicator: Emit typing:start and partner_typing for duration calculated by response length
+    io.to(socket.id).emit(EVENTS.PARTNER_TYPING, { isTyping: true });
+    io.to(socket.id).emit('typing:start');
+
+    const typingDuration1 = calculateTypingDelay(bubble1);
+
+    const typingTimer1 = setTimeout(() => {
+      botSession.timers.delete(typingTimer1);
+
+      // Stop typing
+      io.to(socket.id).emit(EVENTS.PARTNER_TYPING, { isTyping: false });
+      io.to(socket.id).emit('typing:stop');
+
+      // Send bubble 1
+      const botMsg1: MessagePayload = {
+        id: `msg_${Date.now()}_${uuidv4().slice(0, 6)}`,
+        senderId: botSession.botSocketId,
+        senderNick: botSession.persona.nickname,
+        text: bubble1,
+        timestamp: Date.now(),
+      };
+      const room = rooms.get(botSession.roomId);
+      if (room) {
+        room.messages.push(botMsg1);
+        if (room.messages.length > 50) room.messages = room.messages.slice(-50);
+      }
+      botSession.history.push({ sender: 'bot', text: bubble1 });
+      io.to(socket.id).emit(EVENTS.MESSAGE, botMsg1);
+
+      // 3. Multi-Bubble Splitting: wait natural human pause, then emit typing, then bubble 2
+      const pauseBetweenBubbles = 600 + Math.random() * 400; // 600 - 1000ms
+
+      const pauseTimer = setTimeout(() => {
+        botSession.timers.delete(pauseTimer);
+
+        io.to(socket.id).emit(EVENTS.PARTNER_TYPING, { isTyping: true });
+        io.to(socket.id).emit('typing:start');
+
+        const typingDuration2 = calculateTypingDelay(bubble2);
+
+        const typingTimer2 = setTimeout(() => {
+          botSession.timers.delete(typingTimer2);
+
+          io.to(socket.id).emit(EVENTS.PARTNER_TYPING, { isTyping: false });
+          io.to(socket.id).emit('typing:stop');
+
+          const botMsg2: MessagePayload = {
+            id: `msg_${Date.now()}_${uuidv4().slice(0, 6)}`,
+            senderId: botSession.botSocketId,
+            senderNick: botSession.persona.nickname,
+            text: bubble2,
+            timestamp: Date.now(),
+          };
+          if (room) {
+            room.messages.push(botMsg2);
+            if (room.messages.length > 50) room.messages = room.messages.slice(-50);
+          }
+          botSession.history.push({ sender: 'bot', text: bubble2 });
+          io.to(socket.id).emit(EVENTS.MESSAGE, botMsg2);
+        }, typingDuration2);
+
+        botSession.timers.add(typingTimer2);
+      }, pauseBetweenBubbles);
+
+      botSession.timers.add(pauseTimer);
+    }, typingDuration1);
+
+    botSession.timers.add(typingTimer1);
+  }, readingDelay);
+
+  botSession.timers.add(readingTimer);
+}
+
+/** Handle a successful 1-to-1 match — create room and notify users */
+function handleMatch(io: Server, match: MatchResult, matcher?: Matcher): void {
+  const isBotMatch = !!(match.isBotMatch || match.user1.isBot || match.user2.isBot);
+
+  if (isBotMatch) {
+    const humanUser = match.user1.isBot ? match.user2 : match.user1;
+    const botUser = match.user1.isBot ? match.user1 : match.user2;
+
+    const roomId = generateRoomId();
+    const room: ChatRoom = {
+      id: roomId,
+      sockets: [humanUser.socketId, botUser.socketId],
+      sessions: [humanUser.sessionId, botUser.sessionId],
+      nicknames: [humanUser.nickname, botUser.nickname],
+      messages: [],
+    };
+
+    rooms.set(roomId, room);
+    socketToRoom.set(humanUser.socketId, roomId);
+    socketToRoom.set(botUser.socketId, roomId);
+
+    io.to(humanUser.socketId).emit(EVENTS.MATCHED, {
+      partnerNickname: botUser.nickname,
+      partnerSessionId: botUser.sessionId,
+      sharedInterests: match.sharedInterests,
+    });
+
+    const persona =
+      BOT_PERSONAS.find((p) => p.id === botUser.sessionId) || pickBotPersona(humanUser.interests);
+    const botSession: ActiveBotSession = {
+      humanSocketId: humanUser.socketId,
+      humanSessionId: humanUser.sessionId,
+      botSocketId: botUser.socketId,
+      botSessionId: botUser.sessionId,
+      persona,
+      roomId,
+      history: [],
+      timers: new Set<NodeJS.Timeout>(),
+    };
+    activeBotSessions.set(humanUser.socketId, botSession);
+
+    if (matcher) {
+      matcher.flagBotUser({
+        socketId: humanUser.socketId,
+        sessionId: humanUser.sessionId,
+        user: humanUser,
+        roomId,
+        dropBot: () => {
+          dropBotSession(humanUser.socketId);
+        },
+      });
+    }
+
+    scheduleBotOpener(io, botSession, room);
+    return;
+  }
+
+  // Regular human-to-human match
   const roomId = generateRoomId();
   const room: ChatRoom = {
     id: roomId,
@@ -161,13 +451,16 @@ function handleMatch(io: Server, match: MatchResult): void {
 export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
   // Start the 1-to-1 matching loop (runs every 1s)
   const matcher = new Matcher(queue, (match: MatchResult) => {
-    handleMatch(io, match);
+    handleMatch(io, match, matcher);
   });
   matcher.start(1000);
 
   io.on('connection', (socket: Socket) => {
     onlineCount++;
     broadcastOnlineCount(io);
+
+    const clientIp = getSocketClientIp(socket);
+    socketToIp.set(socket.id, clientIp);
 
     const authSessionId = socket.handshake.auth?.sessionId;
     if (authSessionId && typeof authSessionId === 'string') {
@@ -215,15 +508,16 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
           return;
         }
 
-        const sessionId = data.sessionId.trim().slice(0, 64);
+        const sessionId = sanitizeInput(data.sessionId, 64);
         const nickname = sanitizeNickname(data.nickname);
         if (nickname.length === 0) {
           socket.emit(EVENTS.ERROR, { message: 'Nickname cannot be empty' });
           return;
         }
 
-        // Check ban status
-        const banned = await isBanned(sessionId);
+        // Check ban status for both session and real client IP
+        const clientIp = socketToIp.get(socket.id) || getSocketClientIp(socket);
+        const banned = await isBanned(sessionId, clientIp);
         if (banned) {
           socket.emit(EVENTS.BANNED, {
             reason: 'Your session has been banned due to violations of community rules.',
@@ -239,7 +533,7 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
         // Clean up any existing 1-to-1 room
         const existingRoom = socketToRoom.get(socket.id);
         if (existingRoom) {
-          cleanupRoom(io, existingRoom, socket.id);
+          cleanupRoom(io, existingRoom, socket.id, matcher);
         }
 
         queue.remove(socket.id);
@@ -265,6 +559,9 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
 
         queue.add(queueUser);
         socket.emit(EVENTS.QUEUE_STATUS, { status: 'searching' });
+
+        // Trigger immediate matching & priority hot-swap
+        matcher.matchNow();
       } catch (err) {
         logger.error('Error in join_queue', err);
         socket.emit(EVENTS.ERROR, { message: 'Failed to join queue' });
@@ -295,9 +592,10 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
           return;
         }
 
-        // Sliding rate limiter
+        // Sliding rate limiter by client IP
+        const clientIp = socketToIp.get(socket.id) || socket.id;
         const checkKey = rawText ? rawText : (mediaUrl || 'media');
-        const rateCheck = rateLimiter.check(socket.id, checkKey);
+        const rateCheck = rateLimiter.check(clientIp, checkKey);
         if (!rateCheck.allowed) {
           if (rateCheck.isRepeat) {
             socket.emit(EVENTS.ERROR, { message: "Please don't send repeated messages." });
@@ -309,17 +607,16 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
 
         let cleanText = '';
         if (rawText) {
-          cleanText = sanitizeMessage(rawText);
+          cleanText = sanitizeInput(rawText, 500);
           cleanText = filterProfanity(cleanText);
         }
 
-        const sessionId = socketToSession.get(socket.id) || socket.id;
         const senderNick = socketToNickname.get(socket.id) || 'Stranger';
         const timestamp = Date.now();
 
         const messagePayload: MessagePayload = {
           id: `msg_${timestamp}_${uuidv4().slice(0, 6)}`,
-          senderId: sessionId,
+          senderId: socket.id, // Forcing sender ID to socket.id
           senderNick,
           text: cleanText,
           mediaUrl,
@@ -340,6 +637,12 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
           io.to(partnerSocketId).emit(EVENTS.MESSAGE, messagePayload);
         }
         socket.emit(EVENTS.MESSAGE, messagePayload);
+
+        // Check if chatting with a server-side bot
+        const botSession = activeBotSessions.get(socket.id);
+        if (botSession) {
+          handleBotMessageResponse(io, socket, botSession, cleanText || '');
+        }
       } catch (err) {
         logger.error('Error in send_message', err);
       }
@@ -358,13 +661,19 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
     // ── SKIP ───────────────────────────────────────────────
     socket.on(EVENTS.SKIP, () => {
       queue.remove(socket.id);
+      if (matcher.isChattingWithBot(socket.id)) {
+        matcher.dropBot(socket.id);
+      }
       const roomId = socketToRoom.get(socket.id);
-      if (roomId) cleanupRoom(io, roomId, socket.id);
+      if (roomId) cleanupRoom(io, roomId, socket.id, matcher);
       socket.emit(EVENTS.QUEUE_STATUS, { status: 'idle' });
     });
 
     // ── BLOCK ──────────────────────────────────────────────
     socket.on(EVENTS.BLOCK, () => {
+      if (matcher.isChattingWithBot(socket.id)) {
+        matcher.dropBot(socket.id);
+      }
       const sessionId = socketToSession.get(socket.id);
       const roomId = socketToRoom.get(socket.id);
       if (!sessionId || !roomId) return;
@@ -379,7 +688,7 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
         sessionBlockList.set(sessionId, new Set());
       }
       sessionBlockList.get(sessionId)!.add(partnerSessionId);
-      cleanupRoom(io, roomId, socket.id);
+      cleanupRoom(io, roomId, socket.id, matcher);
     });
 
     // ── REPORT 1-TO-1 ──────────────────────────────────────
@@ -427,7 +736,7 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
           sessionBlockList.set(sessionId, new Set());
         }
         sessionBlockList.get(sessionId)!.add(partnerSessionId);
-        cleanupRoom(io, roomId, socket.id);
+        cleanupRoom(io, roomId, socket.id, matcher);
 
         socket.emit(EVENTS.QUEUE_STATUS, { status: 'idle' });
         socket.emit(EVENTS.ERROR, {
@@ -565,15 +874,17 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
       EVENTS.ROOM_CREATE_PRIVATE,
       (data: { name: string; description?: string; nickname: string; sessionId: string }) => {
         try {
-          const sessionId = data.sessionId || socketToSession.get(socket.id) || socket.id;
+          const sessionId = sanitizeInput(data.sessionId, 64) || socketToSession.get(socket.id) || socket.id;
           const nickname = sanitizeNickname(data.nickname || 'Host');
+          const roomName = sanitizeInput(data.name, 50) || 'Private Room';
+          const roomDesc = data.description ? sanitizeInput(data.description, 200) : undefined;
 
           socketToSession.set(socket.id, sessionId);
           socketToNickname.set(socket.id, nickname);
 
           const { room, inviteCode } = roomManager.createPrivateRoom({
-            name: data.name,
-            description: data.description,
+            name: roomName,
+            description: roomDesc,
             creatorSessionId: sessionId,
           });
 
@@ -609,11 +920,12 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
             return;
           }
 
-          const sessionId = data.sessionId || socketToSession.get(socket.id) || socket.id;
+          const sessionId = sanitizeInput(data.sessionId, 64) || socketToSession.get(socket.id) || socket.id;
           const nickname = sanitizeNickname(data.nickname || 'Anonymous');
+          const clientIp = socketToIp.get(socket.id) || getSocketClientIp(socket);
 
-          // Check if session is banned
-          const banned = await isBanned(sessionId);
+          // Check if session or IP is banned
+          const banned = await isBanned(sessionId, clientIp);
           if (banned) {
             socket.emit(EVENTS.BANNED, {
               reason: 'Your session has been banned due to violations of community rules.',
@@ -730,9 +1042,10 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
 
           if (!rawText && !mediaUrl) return;
 
-          // Per-room rate limiter
+          // Per-room rate limiter by client IP
+          const clientIp = socketToIp.get(socket.id) || socket.id;
           const checkKey = rawText ? rawText : (mediaUrl || 'media');
-          const rateCheck = room.rateLimiter.check(socket.id, checkKey);
+          const rateCheck = room.rateLimiter.check(clientIp, checkKey);
           if (!rateCheck.allowed) {
             if (rateCheck.isRepeat) {
               socket.emit(EVENTS.ERROR, { message: "Please don't send repeated messages." });
@@ -744,14 +1057,14 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
 
           let cleanText = '';
           if (rawText) {
-            cleanText = sanitizeMessage(rawText);
+            cleanText = sanitizeInput(rawText, 500);
             cleanText = filterProfanity(cleanText);
           }
 
           const timestamp = Date.now();
           const messageObj = {
             id: `rm_${timestamp}_${uuidv4().slice(0, 6)}`,
-            senderId: sessionId,
+            senderId: socket.id, // Forcing sender ID to socket.id
             senderNick: member.nickname,
             text: cleanText,
             mediaUrl,
@@ -1099,6 +1412,10 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
       onlineCount = Math.max(0, onlineCount - 1);
       broadcastOnlineCount(io);
 
+      if (matcher.isChattingWithBot(socket.id)) {
+        matcher.dropBot(socket.id);
+      }
+
       // Clean up Friend Presence
       const friendCode = socketToFriendCode.get(socket.id);
       if (friendCode) {
@@ -1120,7 +1437,7 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
 
       // Clean up 1-to-1 room if any
       const roomId = socketToRoom.get(socket.id);
-      if (roomId) cleanupRoom(io, roomId, socket.id);
+      if (roomId) cleanupRoom(io, roomId, socket.id, matcher);
 
       // Clean up Topic room if any
       const topicRoomId = socketToTopicRoom.get(socket.id);
@@ -1139,6 +1456,7 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
 
       queue.remove(socket.id);
       rateLimiter.remove(socket.id);
+      socketToIp.delete(socket.id);
       socketToSession.delete(socket.id);
       socketToNickname.delete(socket.id);
       sessionToSocket.delete(sessionId);

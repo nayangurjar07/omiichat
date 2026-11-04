@@ -150,7 +150,7 @@ export function useSocket() {
       mediaType?: 'image' | 'audio';
       timestamp: number;
     }) => {
-      const isSelf = data.senderId === sessionIdRef.current;
+      const isSelf = data.senderId === sessionIdRef.current || (!!socket.id && data.senderId === socket.id);
       setMessages((prev) => [
         ...prev,
         {
@@ -194,7 +194,7 @@ export function useSocket() {
         {
           id: `system-${Date.now()}`,
           senderId: 'system',
-          text: 'Stranger has left the chat.',
+          text: 'Stranger disconnected from the chat.',
           timestamp: Date.now(),
           isSelf: false,
           isSystem: true,
@@ -287,7 +287,7 @@ export function useSocket() {
 
     const onRoomMessage = (msg: RoomMessage) => {
       setRoomMessages((prev) => [...prev, msg]);
-      if (msg.senderId !== sessionIdRef.current) {
+      if (msg.senderId !== sessionIdRef.current && (!socket.id || msg.senderId !== socket.id)) {
         sounds.playMessagePop();
       }
     };

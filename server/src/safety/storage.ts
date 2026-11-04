@@ -102,3 +102,8 @@ class StorageService {
 }
 
 export const cloudStorage = new StorageService();
+
+// Re-export ban and report persistence services for safety module
+export { createReport, getReports, updateReportStatus } from './reportService';
+export { banSession, unbanSession, getBans, isBanned, hydrateActiveBans } from './banService';
+

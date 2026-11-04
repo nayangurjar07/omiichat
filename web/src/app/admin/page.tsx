@@ -48,7 +48,10 @@ export default function AdminPage() {
     setErrorMsg(null);
     try {
       const res = await fetch(`${apiBase}/api/admin/reports`, {
-        headers: { 'x-admin-password': pwd },
+        headers: {
+          'Authorization': `Bearer ${pwd}`,
+          'x-admin-password': pwd,
+        },
       });
       if (res.ok) {
         const data = await res.json();
@@ -75,7 +78,10 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const res = await fetch(`${apiBase}/api/admin/reports`, {
-        headers: { 'x-admin-password': pwd },
+        headers: {
+          'Authorization': `Bearer ${pwd}`,
+          'x-admin-password': pwd,
+        },
       });
       if (res.ok) {
         const data = await res.json();
@@ -91,7 +97,10 @@ export default function AdminPage() {
   const fetchBans = useCallback(async (pwd = password) => {
     try {
       const res = await fetch(`${apiBase}/api/admin/bans`, {
-        headers: { 'x-admin-password': pwd },
+        headers: {
+          'Authorization': `Bearer ${pwd}`,
+          'x-admin-password': pwd,
+        },
       });
       if (res.ok) {
         const data = await res.json();
@@ -116,7 +125,10 @@ export default function AdminPage() {
     try {
       const res = await fetch(`${apiBase}/api/admin/reports/${reportId}/dismiss`, {
         method: 'POST',
-        headers: { 'x-admin-password': password },
+        headers: {
+          'Authorization': `Bearer ${password}`,
+          'x-admin-password': password,
+        },
       });
       if (res.ok) {
         setReports((prev) =>
@@ -140,6 +152,7 @@ export default function AdminPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${password}`,
           'x-admin-password': password,
         },
         body: JSON.stringify({
@@ -168,6 +181,7 @@ export default function AdminPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${password}`,
           'x-admin-password': password,
         },
         body: JSON.stringify({ sessionId }),

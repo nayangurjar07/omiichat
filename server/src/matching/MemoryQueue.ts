@@ -1,4 +1,5 @@
 import { QueueUser, MatchResult, IMatchingQueue } from './types';
+import { pickBotPersona } from '../bot/botEngine';
 
 /**
  * How long to wait for an interest-based match before
@@ -7,17 +8,31 @@ import { QueueUser, MatchResult, IMatchingQueue } from './types';
 const INTEREST_MATCH_TIMEOUT_MS = 10_000;
 
 /**
+ * Queue fallback timer: If a user remains unmatched in the queue
+ * for more than 4 seconds, automatically pair them with a server-managed bot session.
+ */
+const BOT_FALLBACK_TIMEOUT_MS = 4000;
+
+/**
  * In-memory matching queue.
  * For production, implement IMatchingQueue with Redis Sorted Sets.
  */
 export class MemoryQueue implements IMatchingQueue {
   private queue = new Map<string, QueueUser>();
+  private fallbackTimers = new Map<string, NodeJS.Timeout>();
+  private onFallback?: (user: QueueUser) => void;
+
+  setFallbackHandler(handler: (user: QueueUser) => void): void {
+    this.onFallback = handler;
+  }
 
   add(user: QueueUser): void {
     this.queue.set(user.socketId, user);
+    this.scheduleFallbackTimer(user.socketId);
   }
 
   remove(socketId: string): QueueUser | undefined {
+    this.clearFallbackTimer(socketId);
     const user = this.queue.get(socketId);
     if (user) this.queue.delete(socketId);
     return user;
@@ -34,8 +49,33 @@ export class MemoryQueue implements IMatchingQueue {
     return undefined;
   }
 
+  getAll(): QueueUser[] {
+    return Array.from(this.queue.values());
+  }
+
   size(): number {
     return this.queue.size;
+  }
+
+  private scheduleFallbackTimer(socketId: string): void {
+    this.clearFallbackTimer(socketId);
+    const timer = setTimeout(() => {
+      this.fallbackTimers.delete(socketId);
+      const user = this.queue.get(socketId);
+      if (!user) return;
+      if (this.onFallback) {
+        this.onFallback(user);
+      }
+    }, BOT_FALLBACK_TIMEOUT_MS);
+    this.fallbackTimers.set(socketId, timer);
+  }
+
+  private clearFallbackTimer(socketId: string): void {
+    const timer = this.fallbackTimers.get(socketId);
+    if (timer) {
+      clearTimeout(timer);
+      this.fallbackTimers.delete(socketId);
+    }
   }
 
   /**
@@ -45,6 +85,7 @@ export class MemoryQueue implements IMatchingQueue {
    * 3. If user waited <10s and has interests, require affinity score > 0
    * 4. After 10s, fall back to any non-blocked user
    * 5. Pick highest score, break ties by wait time
+   * 6. Queue fallback: If unmatched user waited >= 4s, pair with server-managed bot
    */
   findMatches(): MatchResult[] {
     const results: MatchResult[] = [];
@@ -54,6 +95,7 @@ export class MemoryQueue implements IMatchingQueue {
     const users = Array.from(this.queue.values())
       .sort((a, b) => a.joinedAt - b.joinedAt);
 
+    // Phase 1: Real human-to-human matching
     for (const user of users) {
       if (matched.has(user.socketId)) continue;
 
@@ -107,10 +149,48 @@ export class MemoryQueue implements IMatchingQueue {
       if (bestCandidate) {
         matched.add(user.socketId);
         matched.add(bestCandidate.socketId);
+        this.clearFallbackTimer(user.socketId);
+        this.clearFallbackTimer(bestCandidate.socketId);
         results.push({
           user1: user,
           user2: bestCandidate,
           sharedInterests: bestShared,
+          isBotMatch: false,
+        });
+      }
+    }
+
+    // Phase 2: Queue fallback timer check (> 4 seconds)
+    // Automatically pair unmatched users with a server-managed bot session
+    for (const user of users) {
+      if (matched.has(user.socketId)) continue;
+      if (user.isBot) continue;
+
+      if ((now - user.joinedAt) >= BOT_FALLBACK_TIMEOUT_MS) {
+        const persona = pickBotPersona(user.interests);
+        const botUser: QueueUser = {
+          socketId: `bot_sock_${persona.id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          sessionId: persona.id,
+          nickname: persona.nickname,
+          interests: persona.interests,
+          language: user.language || 'en',
+          joinedAt: now,
+          blockedSids: [],
+          isBot: true,
+        };
+
+        const sharedInterests = user.interests.filter(i =>
+          persona.interests.map(p => p.toLowerCase()).includes(i.toLowerCase())
+        );
+
+        matched.add(user.socketId);
+        this.clearFallbackTimer(user.socketId);
+
+        results.push({
+          user1: user,
+          user2: botUser,
+          sharedInterests,
+          isBotMatch: true,
         });
       }
     }

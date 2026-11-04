@@ -16,6 +16,10 @@ export class LocalStorageService implements IStorageService {
       fs.mkdirSync(this.uploadDir, { recursive: true });
       logger.info(`Created local uploads directory at: ${this.uploadDir}`);
     }
+
+    if (process.env.NODE_ENV === 'production') {
+      logger.warn('LocalStorageService running in production mode. Local container disk is ephemeral; configure Supabase or S3 for persistent cloud media.');
+    }
   }
 
   async upload(buffer: Buffer, _originalFilename: string, mimeType: string): Promise<UploadResult> {

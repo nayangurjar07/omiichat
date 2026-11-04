@@ -1,15 +1,14 @@
 /**
  * Admin REST API routes.
- * Protected by a constant-time password check and IP rate limiting.
- * The frontend admin page sends the password in x-admin-password header.
+ * Protected by requireAdminAuth middleware checking ADMIN_SECRET and Bearer authorization.
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
-import { config } from '../config';
 import { getReports, updateReportStatus } from '../safety/reportService';
 import { banSession, unbanSession, getBans } from '../safety/banService';
 import { logger } from '../utils/logger';
+import { extractClientIp } from '../config';
 
 const router = Router();
 
@@ -41,16 +40,8 @@ function recordSuccessfulAttempt(ip: string): void {
   failedAttemptsMap.delete(ip);
 }
 
-function timingSafeCompare(provided: string, expected: string): boolean {
-  if (!provided || !expected) return false;
-  const hashProvided = crypto.createHash('sha256').update(provided).digest();
-  const hashExpected = crypto.createHash('sha256').update(expected).digest();
-  return crypto.timingSafeEqual(hashProvided, hashExpected);
-}
-
-/** Admin password protection middleware */
-function requireAdmin(req: Request, res: Response, next: NextFunction): void {
-  const clientIp = req.ip || (req.socket?.remoteAddress) || '127.0.0.1';
+export function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
+  const clientIp = extractClientIp(req.headers, req.ip || req.socket?.remoteAddress || '127.0.0.1');
 
   if (isRateLimited(clientIp)) {
     logger.warn(`Admin rate limit hit for IP: ${clientIp}`);
@@ -58,29 +49,27 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
     return;
   }
 
-  const password = (req.headers['x-admin-password'] as string) || '';
+  const secret = process.env.ADMIN_SECRET || process.env.ADMIN_PASSWORD;
+  const authHeader = req.headers.authorization || (req.headers['x-admin-password'] ? `Bearer ${req.headers['x-admin-password']}` : '');
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
 
-  const configuredPassword = (
-    process.env.ADMIN_PASSWORD ||
-    config.adminPassword ||
-    ''
-  ).trim();
-
-  // If running in production and no secure admin password is set, block access
-  const isProd = process.env.NODE_ENV === 'production';
-  const expectedPassword = configuredPassword || (isProd ? '' : 'admin');
-
-  if (!expectedPassword || !password || !timingSafeCompare(password.trim(), expectedPassword)) {
+  if (!secret || !token) {
     recordFailedAttempt(clientIp);
-    res.status(401).json({ error: 'Unauthorized: invalid password' });
-    return;
+    return res.status(401).json({ error: 'Unauthorized: Missing admin token' });
+  }
+
+  const secretBuf = Buffer.from(secret);
+  const tokenBuf = Buffer.from(token);
+  if (secretBuf.length !== tokenBuf.length || !crypto.timingSafeEqual(secretBuf, tokenBuf)) {
+    recordFailedAttempt(clientIp);
+    return res.status(403).json({ error: 'Forbidden: Invalid admin token' });
   }
 
   recordSuccessfulAttempt(clientIp);
   next();
 }
 
-router.use(requireAdmin);
+router.use(requireAdminAuth);
 
 // ─── Reports ─────────────────────────────────────────────────────────
 

@@ -1,7 +1,18 @@
 /**
  * Input sanitization utilities.
+ * Strips all HTML tags, script payloads, and ASCII control characters.
  * All user input passes through these before being stored or broadcast.
  */
+
+export function sanitizeInput(input: unknown, maxLength = 500): string {
+  if (typeof input !== 'string') return '';
+  return input
+    .replace(/<[^>]*>?/gm, '')
+    .replace(/javascript:/gi, '')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .trim()
+    .slice(0, maxLength);
+}
 
 /** Strip HTML tags from a string */
 export function stripHtml(input: string): string {
@@ -27,18 +38,10 @@ export function truncate(input: string, maxLength: number): string {
 
 /** Full sanitization pipeline for user messages */
 export function sanitizeMessage(input: string): string {
-  let result = input.trim();
-  result = stripHtml(result);
-  result = escapeHtml(result);
-  result = truncate(result, 500);
-  return result;
+  return sanitizeInput(input, 500);
 }
 
 /** Sanitize a nickname (shorter limit, same pipeline) */
 export function sanitizeNickname(input: string): string {
-  let result = input.trim();
-  result = stripHtml(result);
-  result = escapeHtml(result);
-  result = truncate(result, 20);
-  return result;
+  return sanitizeInput(input, 20);
 }

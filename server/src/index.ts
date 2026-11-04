@@ -19,6 +19,7 @@ async function bootstrap() {
   await initDatabase();
 
   const app = express();
+  app.set('trust proxy', 1);
   const server = http.createServer(app);
 
   // Security & Parsing Middleware

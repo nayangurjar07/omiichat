@@ -1,18 +1,20 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { CloudStorageService } from '../storage/CloudStorageService';
-import { moderateImage } from '../storage/imageModeration';
+import { moderateImage, hasValidMediaSignature } from '../storage/imageModeration';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
 const router = Router();
 const storage = new CloudStorageService();
 
-// Multer memory storage so we can validate buffer and magic bytes before writing
+// Cap uploads at 2 MB with multer memory storage for magic-byte validation
+const MAX_UPLOAD_LIMIT = 2 * 1024 * 1024; // 2 MB cap
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: Math.max(config.maxUploadBytes, config.maxAudioBytes),
+    fileSize: MAX_UPLOAD_LIMIT,
   },
 });
 
@@ -29,7 +31,8 @@ const ALLOWED_AUDIO_MIMES = [
 
 /**
  * POST /api/upload
- * Handles both images (max 3MB, jpg/png/webp) and voice notes (max 30s/5MB).
+ * Handles images and voice notes capped at 2 MB.
+ * Validates magic-byte signatures and routes to Cloud/Supabase storage in production.
  */
 router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
   try {
@@ -51,22 +54,24 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return;
     }
 
-    // 2. Validate file size limits
-    if (isImage && size > config.maxUploadBytes) {
+    // 2. Validate 2 MB size cap
+    if (size > MAX_UPLOAD_LIMIT) {
       res.status(400).json({
-        error: `Image exceeds maximum allowed size of 3 MB (${(size / (1024 * 1024)).toFixed(2)} MB uploaded).`,
+        error: `File exceeds maximum allowed size of 2 MB (${(size / (1024 * 1024)).toFixed(2)} MB uploaded).`,
       });
       return;
     }
 
-    if (isAudio && size > config.maxAudioBytes) {
+    // 3. Magic-byte signature verification: reject SVG, executables, scripts, or spoofed headers
+    if (!hasValidMediaSignature(buffer)) {
+      logger.warn(`Upload rejected: invalid media signature for file ${originalname} (${mimetype})`);
       res.status(400).json({
-        error: `Audio note exceeds maximum size limit of 5 MB.`,
+        error: 'Invalid file signature. Executable, SVG, HTML, or disguised files are strictly prohibited.',
       });
       return;
     }
 
-    // 3. For images: execute moderation pipeline
+    // 4. For images: execute moderation pipeline
     let moderation = { approved: true, flagged: false, reason: undefined as string | undefined };
     if (isImage) {
       const modResult = await moderateImage(buffer, mimetype, originalname);
@@ -83,9 +88,9 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       };
     }
 
-    // 4. Save through storage provider
+    // 5. Save through Cloud/Supabase storage provider
     const result = await storage.upload(buffer, originalname, mimetype);
-    logger.info(`Uploaded ${isImage ? 'image' : 'voice note'}: ${result.key} (${result.size} bytes)`);
+    logger.info(`Uploaded ${isImage ? 'image' : 'voice note'} via ${storage.getActiveProvider()}: ${result.key} (${result.size} bytes)`);
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
@@ -96,6 +101,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       type: isImage ? 'image' : 'audio',
       mimeType: mimetype,
       size: result.size,
+      provider: storage.getActiveProvider(),
       moderation,
     });
   } catch (err) {

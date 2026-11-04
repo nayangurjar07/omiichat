@@ -12,7 +12,7 @@ import {
   UserPlus,
   Check,
   Home,
-  Users,
+  FastForward,
 } from 'lucide-react';
 
 interface StatusBarProps {
@@ -54,9 +54,9 @@ export function StatusBar({
   };
 
   return (
-    <header className="w-full px-4 py-2.5 bg-[var(--bg-surface)] border-b border-[var(--border-line)] transition-colors">
+    <header className="w-full px-4 py-2.5 bg-[#121212] border-b border-[#27272a] transition-colors">
       <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* Switchboard signature line */}
+        {/* Switchboard line indicator */}
         <div className="flex-1 min-w-0 pr-2 flex items-center gap-2">
           <SwitchboardLine
             status={status}
@@ -66,16 +66,15 @@ export function StatusBar({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-
+        <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center font-mono">
           {/* Home Button */}
           <button
             type="button"
             onClick={onLeave}
             title="Return to home page"
-            className="min-h-[40px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] border border-[var(--border-line)] transition-all duration-200 cursor-pointer active:scale-95 shadow-xs"
+            className="h-9 inline-flex items-center gap-1.5 px-2.5 rounded bg-[#18181b] hover:bg-[#27272a] text-xs text-zinc-300 hover:text-white border border-[#27272a] transition-colors cursor-pointer"
           >
-            <Home className="w-3.5 h-3.5 text-[var(--accent-dial)]" />
+            <Home className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Home</span>
           </button>
 
@@ -84,26 +83,26 @@ export function StatusBar({
             type="button"
             onClick={toggleSound}
             aria-label={soundEnabled ? 'Mute sound alerts' : 'Enable sound alerts'}
-            className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-ink)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer active:scale-95"
+            className="h-9 w-9 inline-flex items-center justify-center rounded bg-[#18181b] hover:bg-[#27272a] text-zinc-400 hover:text-white border border-[#27272a] transition-colors cursor-pointer"
           >
-            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-zinc-600" />}
           </button>
 
-          {/* Report (if in chat or recently left) */}
+          {/* Report Button (if in chat or recently left) */}
           {(status === 'matched' || status === 'partner_left') && (
             <button
               type="button"
               onClick={onReport}
               aria-label="Report conversation"
               title="Report user"
-              className="min-h-[40px] inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--text-muted)] hover:text-[var(--color-alert)] hover:bg-rose-500/10 transition-colors cursor-pointer"
+              className="h-9 inline-flex items-center gap-1 px-2.5 rounded bg-[#18181b] hover:bg-rose-950/40 text-xs text-zinc-400 hover:text-rose-400 border border-[#27272a] transition-colors cursor-pointer"
             >
               <ShieldAlert className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Report</span>
+              <span className="hidden md:inline">Report</span>
             </button>
           )}
 
-          {/* Add Friend (if matched) */}
+          {/* Add Friend Button (if matched) */}
           {status === 'matched' && onAddFriend && (
             <button
               type="button"
@@ -116,18 +115,18 @@ export function StatusBar({
                   ? 'Request pending recipient acceptance'
                   : 'Send friend request'
               }
-              className={`min-h-[40px] inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+              className={`h-9 inline-flex items-center gap-1 px-2.5 rounded text-xs border transition-colors ${
                 effectiveFriendState === 'friend'
-                  ? 'bg-emerald-500/10 text-[var(--color-success)] border-emerald-500/30 cursor-default'
+                  ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30 cursor-default'
                   : effectiveFriendState === 'pending'
-                  ? 'bg-amber-500/10 text-amber-500 border-amber-500/30 cursor-default'
-                  : 'bg-[var(--bg-subtle)] hover:bg-[var(--border-line)] text-[var(--text-ink)] border-[var(--border-line)] cursor-pointer'
+                  ? 'bg-amber-950/40 text-amber-400 border-amber-500/30 cursor-default'
+                  : 'bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white border-[#27272a] cursor-pointer'
               }`}
             >
               {effectiveFriendState === 'friend' ? (
-                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
               ) : effectiveFriendState === 'pending' ? (
-                <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
               ) : (
                 <UserPlus className="w-3.5 h-3.5" />
               )}
@@ -135,21 +134,22 @@ export function StatusBar({
                 {effectiveFriendState === 'friend'
                   ? 'Friends'
                   : effectiveFriendState === 'pending'
-                  ? 'Request sent'
-                  : 'Add friend'}
+                  ? 'Pending'
+                  : 'Add Friend'}
               </span>
             </button>
           )}
 
-          {/* Skip Button (always visible, primary action) */}
+          {/* Skip / Next Button (Primary High-Contrast Action) */}
           <button
             type="button"
             onClick={onSkip}
-            title="Press Esc twice to skip"
-            className="min-h-[40px] inline-flex items-center gap-1 px-4 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent-dial)] hover:bg-[var(--accent-dial-hover)] text-white transition-colors cursor-pointer shadow-xs active:scale-95"
+            title="Next match (hit Esc anytime)"
+            className="h-9 inline-flex items-center gap-1.5 px-3.5 rounded bg-white hover:bg-zinc-200 text-black text-xs font-mono font-bold tracking-wide transition-colors cursor-pointer active:scale-95 shadow-sm"
           >
-            <span>Skip</span>
-            <kbd className="hidden sm:inline-block ml-1 px-1 py-0.2 rounded text-[10px] font-mono bg-white/20">
+            <FastForward className="w-3.5 h-3.5 fill-black" />
+            <span>Next</span>
+            <kbd className="hidden sm:inline-block px-1 py-0.2 rounded text-[10px] bg-zinc-200 text-zinc-800 border border-zinc-300">
               Esc
             </kbd>
           </button>

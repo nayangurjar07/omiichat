@@ -5,51 +5,52 @@ import { siteConfig } from '@/config/site';
 
 export function Footer() {
   return (
-    <footer className="w-full border-t border-[var(--border-line)] bg-[var(--bg-paper)] py-8 transition-colors">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-6 border-b border-[var(--border-line)]">
+    <footer className="w-full border-t border-[#27272a] bg-[#0a0a0a] py-6 text-xs font-mono text-zinc-500">
+      <div className="max-w-5xl mx-auto px-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-[#27272a]">
           <div className="flex items-center gap-2">
-            <span className="font-display font-bold text-lg tracking-tight text-[var(--text-ink)] select-none">
-              omii
+            <span className="font-bold text-zinc-300">
+              omii.chat
             </span>
-            <span className="text-xs text-[var(--text-muted)]">
-              Two strangers on the line.
+            <span className="text-zinc-600">/</span>
+            <span className="text-zinc-500">
+              Two strangers. 1-to-1 line.
             </span>
           </div>
 
-          <nav className="flex flex-wrap items-center justify-center gap-6 text-xs text-[var(--text-muted)]">
-            <Link href="/chat" className="hover:text-[var(--text-ink)] transition-colors">
+          <nav className="flex flex-wrap items-center justify-center gap-4 text-zinc-400">
+            <Link href="/chat" className="hover:text-white transition-colors">
               Chat
             </Link>
-            <Link href="/rooms" className="hover:text-[var(--text-ink)] transition-colors">
+            <Link href="/rooms" className="hover:text-white transition-colors">
               Rooms
             </Link>
-            <Link href="/rules" className="hover:text-[var(--text-ink)] transition-colors">
+            <Link href="/rules" className="hover:text-white transition-colors">
               Rules
             </Link>
-            <Link href="/faq" className="hover:text-[var(--text-ink)] transition-colors">
+            <Link href="/faq" className="hover:text-white transition-colors">
               FAQ
             </Link>
-            <Link href="/privacy" className="hover:text-[var(--text-ink)] transition-colors">
+            <Link href="/privacy" className="hover:text-white transition-colors">
               Privacy
             </Link>
-            <Link href="/terms" className="hover:text-[var(--text-ink)] transition-colors">
+            <Link href="/terms" className="hover:text-white transition-colors">
               Terms
             </Link>
-            <Link href="/contact" className="hover:text-[var(--text-ink)] transition-colors">
+            <Link href="/contact" className="hover:text-white transition-colors">
               Contact
             </Link>
-            <Link href="/admin" className="hover:text-[var(--text-ink)] transition-colors">
+            <Link href="/admin" className="hover:text-white transition-colors">
               Admin
             </Link>
           </nav>
         </div>
 
-        <div className="pt-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
+        <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-zinc-600">
           <p>
-            Safe 1-on-1 conversations for everyone. Voice notes and photos vanish when chat ends.
+            Ephemeral &amp; zero-log. Messages and media vanish immediately when the line disconnects.
           </p>
-          <p>© {new Date().getFullYear()} {siteConfig.siteName}. Human-made.</p>
+          <p>© {new Date().getFullYear()} {siteConfig.siteName}. High-contrast terminal.</p>
         </div>
       </div>
     </footer>

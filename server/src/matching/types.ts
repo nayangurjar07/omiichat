@@ -13,6 +13,7 @@ export interface QueueUser {
   language: string;
   joinedAt: number;       // Date.now() timestamp
   blockedSids: string[];  // Session IDs this user has blocked
+  isBot?: boolean;
 }
 
 /** Result of a successful match between two users */
@@ -20,6 +21,7 @@ export interface MatchResult {
   user1: QueueUser;
   user2: QueueUser;
   sharedInterests: string[];
+  isBotMatch?: boolean;
 }
 
 /**
@@ -38,6 +40,10 @@ export interface IMatchingQueue {
   getBySessionId(sessionId: string): QueueUser | undefined;
   /** Number of users currently in the queue */
   size(): number;
+  /** Get all users currently waiting in the queue */
+  getAll?(): QueueUser[];
   /** Run the matching algorithm and return all found matches */
   findMatches(): MatchResult[];
+  /** Optional handler triggered when a user's queue fallback timer expires */
+  setFallbackHandler?(handler: (user: QueueUser) => void): void;
 }

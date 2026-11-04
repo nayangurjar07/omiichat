@@ -21,78 +21,73 @@ export function SwitchboardLine({
     <div
       role="status"
       aria-label={`Connection state: ${
-        isMatched ? `Connected to ${partnerNickname}` : isSearching ? 'Searching for stranger' : isLeft ? 'Stranger disconnected' : 'Idle'
+        isMatched
+          ? `Connected to ${partnerNickname}`
+          : isSearching
+          ? 'Searching for stranger'
+          : isLeft
+          ? 'Stranger disconnected'
+          : 'Idle'
       }`}
-      className={`flex items-center gap-2 select-none ${
+      className={`flex items-center gap-2 select-none font-mono ${
         isCompact ? 'w-full max-w-md mx-auto' : 'w-full'
       }`}
     >
-      {/* Self Jack / Marker */}
+      {/* Self Terminal Indicator */}
       <div className="flex items-center gap-1.5 shrink-0">
         <span
-          className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${
+          className={`w-2 h-2 rounded-full transition-colors ${
             isMatched
-              ? 'bg-[var(--accent-dial)] shadow-[0_0_8px_var(--accent-dial)]'
+              ? 'bg-emerald-400'
               : isSearching
-              ? 'bg-[var(--accent-dial)] animate-pulse'
-              : 'bg-[var(--text-muted)]'
+              ? 'bg-zinc-400 animate-pulse'
+              : 'bg-zinc-600'
           }`}
         />
-        <span className="text-xs font-semibold text-[var(--text-ink)] tracking-tight">You</span>
+        <span className="text-xs font-bold text-zinc-200">You</span>
       </div>
 
-      {/* Switchboard Physical Line Canvas / SVG */}
-      <div className="flex-1 relative h-6 flex items-center min-w-[60px] sm:min-w-[120px]">
+      {/* Terminal Line */}
+      <div className="flex-1 relative h-5 flex items-center min-w-[50px] sm:min-w-[100px]">
         {isSearching && (
-          <svg
-            className="w-full h-full overflow-visible"
-            viewBox="0 0 200 24"
-            preserveAspectRatio="none"
-          >
-            <path
-              d="M 0,12 Q 30,4 60,12 T 120,12 T 180,12 L 200,12"
-              fill="none"
-              stroke="var(--line-switchboard)"
-              strokeWidth="2"
-              strokeDasharray="4 3"
-              className="animate-[switchboardWave_1.8s_linear_infinite]"
-            />
-          </svg>
+          <div className="w-full h-[1px] bg-zinc-700 relative overflow-hidden">
+            <div className="absolute inset-y-0 w-1/3 bg-zinc-400 animate-[switchboardWave_1.5s_linear_infinite]" />
+          </div>
         )}
 
         {isMatched && (
-          <div className="w-full flex items-center transition-all duration-300">
-            <div className="w-full h-[2px] bg-[var(--line-switchboard)] rounded-full shadow-[0_0_6px_var(--line-switchboard)]" />
+          <div className="w-full flex items-center">
+            <div className="w-full h-[2px] bg-emerald-500 rounded-full" />
           </div>
         )}
 
         {isLeft && (
-          <div className="w-full flex items-center gap-1 transition-all duration-300">
-            <div className="flex-1 h-[2px] bg-[var(--color-alert)]/60 rounded-full" />
-            <span className="text-[10px] uppercase font-mono px-1 py-0.5 rounded text-[var(--color-alert)] bg-rose-500/10">
-              Cut
+          <div className="w-full flex items-center gap-1">
+            <div className="flex-1 h-[1px] bg-rose-500/60" />
+            <span className="text-[10px] font-mono px-1 py-0.2 rounded text-rose-400 bg-rose-950/40 border border-rose-500/30">
+              DISCONNECTED
             </span>
-            <div className="flex-1 h-[2px] bg-[var(--color-alert)]/60 rounded-full" />
+            <div className="flex-1 h-[1px] bg-rose-500/60" />
           </div>
         )}
 
         {!isSearching && !isMatched && !isLeft && (
-          <div className="w-full h-[1px] bg-[var(--border-line)]" />
+          <div className="w-full h-[1px] bg-zinc-800" />
         )}
       </div>
 
-      {/* Stranger Jack / Marker */}
+      {/* Stranger Terminal Indicator */}
       <div className="flex items-center gap-1.5 shrink-0">
-        <span className="text-xs font-semibold text-[var(--text-ink)] tracking-tight truncate max-w-[110px] sm:max-w-[160px]">
+        <span className="text-xs font-bold text-zinc-200 truncate max-w-[110px] sm:max-w-[160px]">
           {isMatched ? partnerNickname : isLeft ? 'Left' : 'Stranger'}
         </span>
         <span
-          className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${
+          className={`w-2 h-2 rounded-full transition-colors ${
             isMatched
-              ? 'bg-slate-500 dark:bg-slate-300 shadow-[0_0_6px_rgba(148,163,184,0.4)]'
+              ? 'bg-emerald-400'
               : isLeft
-              ? 'bg-[var(--color-alert)]'
-              : 'bg-[var(--border-line)]'
+              ? 'bg-rose-500'
+              : 'bg-zinc-700'
           }`}
         />
       </div>
