@@ -88,3 +88,4 @@ export function AgeGateModal({ isOpen, onConfirm, onDecline }: AgeGateModalProps
     </div>
   );
 }
+
