@@ -120,31 +120,29 @@ CREATE POLICY "Allow service_role full access to ReconnectCode" ON public."Recon
 -- ============================================================================
 -- STORAGE BUCKETS CONFIGURATION (uploads & reports)
 -- ============================================================================
+-- Note:
+-- 1. 'uploads' is public for direct URL access, but NO broad SELECT policy is
+--    granted on storage.objects. This allows direct image viewing by file path
+--    while completely blocking unauthorized clients from listing/scraping all files.
+-- 2. 'reports' contains sensitive moderation evidence and is strictly private.
+-- ============================================================================
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES
   ('uploads', 'uploads', true, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/m4a', 'audio/wav', 'audio/aac']),
-  ('reports', 'reports', true, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/m4a', 'audio/wav', 'audio/aac'])
+  ('reports', 'reports', false, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/m4a', 'audio/wav', 'audio/aac'])
 ON CONFLICT (id) DO UPDATE SET
-  public = true,
+  public = EXCLUDED.public,
   file_size_limit = 10485760;
 
--- Storage Read Policy (Public can view media in chat)
+-- Drop broad public SELECT policies that allowed clients to list all files
 DROP POLICY IF EXISTS "Public read for uploads bucket" ON storage.objects;
 DROP POLICY IF EXISTS "Public read for reports bucket" ON storage.objects;
 
-CREATE POLICY "Public read for uploads bucket" ON storage.objects
-  FOR SELECT USING (bucket_id = 'uploads');
-
-CREATE POLICY "Public read for reports bucket" ON storage.objects
-  FOR SELECT USING (bucket_id = 'reports');
-
--- Storage Upload Policy (Only backend service_role can upload)
+-- Storage Management Policy: Only backend service_role can list, upload, and prune files
 DROP POLICY IF EXISTS "Service role upload to uploads" ON storage.objects;
 DROP POLICY IF EXISTS "Service role upload to reports" ON storage.objects;
+DROP POLICY IF EXISTS "Service role full access to storage.objects" ON storage.objects;
 
-CREATE POLICY "Service role upload to uploads" ON storage.objects
-  FOR ALL TO service_role USING (bucket_id = 'uploads') WITH CHECK (bucket_id = 'uploads');
-
-CREATE POLICY "Service role upload to reports" ON storage.objects
-  FOR ALL TO service_role USING (bucket_id = 'reports') WITH CHECK (bucket_id = 'reports');
+CREATE POLICY "Service role full access to storage.objects" ON storage.objects
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
