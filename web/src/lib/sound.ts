@@ -3,20 +3,40 @@
 class SoundEffects {
   private ctx: AudioContext | null = null;
   private enabled = true;
+  private hasInteracted = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('omii_sound_enabled');
       this.enabled = stored !== 'false';
+
+      const unlock = () => {
+        this.hasInteracted = true;
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+        window.removeEventListener('pointerdown', unlock);
+        window.removeEventListener('keydown', unlock);
+        window.removeEventListener('click', unlock);
+      };
+
+      window.addEventListener('pointerdown', unlock, { passive: true });
+      window.addEventListener('keydown', unlock, { passive: true });
+      window.addEventListener('click', unlock, { passive: true });
     }
   }
 
   private initCtx(): AudioContext | null {
     if (typeof window === 'undefined') return null;
+    if (!this.hasInteracted) return null; // Defer AudioContext to prevent browser autoplay warning before gesture
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
-        this.ctx = new AudioCtx();
+        try {
+          this.ctx = new AudioCtx();
+        } catch {
+          return null;
+        }
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {

@@ -10,7 +10,7 @@ import { logger } from './utils/logger';
 import { MemoryQueue } from './matching/MemoryQueue';
 import { setupSocketHandlers, cleanStaleSessions } from './socket/handler';
 import adminRoutes from './admin/routes';
-import uploadRoutes, { storage } from './upload/routes';
+import uploadRoutes, { storage, handleGetMedia } from './upload/routes';
 import authRoutes from './auth/routes';
 import { cleanExpiredReconnectCodes } from './reconnect/reconnectService';
 import { initDatabase } from './db/initDb';
@@ -71,7 +71,7 @@ async function bootstrap() {
     });
   });
 
-  // Media Static Storage Directory with CORS & Security Headers
+  // Media Storage & Streaming (handles S3, Supabase, and local disk)
   const uploadDir = storage.getUploadDir();
   app.use(
     '/uploads',
@@ -80,11 +80,14 @@ async function bootstrap() {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
       res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
       next();
     },
-    express.static(uploadDir)
+    express.static(uploadDir),
+    handleGetMedia
   );
+
+  // Dedicated media streaming route
+  app.get('/api/media/:key', handleGetMedia);
 
   // REST APIs
   app.use('/api', uploadRoutes);
@@ -188,6 +191,14 @@ async function bootstrap() {
         req.path.startsWith('/socket.io/') ||
         path.extname(req.path) !== ''
       ) {
+        if (req.path.endsWith('.css')) {
+          res.setHeader('Content-Type', 'text/css; charset=utf-8');
+          return res.status(404).send('/* CSS asset not found */');
+        }
+        if (req.path.endsWith('.js') || req.path.endsWith('.mjs')) {
+          res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+          return res.status(404).send('/* JS asset not found */');
+        }
         return res.status(404).json({ error: 'Not found' });
       }
 

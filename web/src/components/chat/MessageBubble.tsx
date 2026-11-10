@@ -115,8 +115,13 @@ export function MessageBubble({
   const audioSrc = extractAudioSource(message);
   const rawText = (message.content || message.text || '').trim();
   const displayCaption =
-    (imageSrc && (rawText === imageSrc || rawText.startsWith('data:image/'))) ||
-    (audioSrc && (rawText === audioSrc || rawText.startsWith('data:audio/')))
+    (imageSrc &&
+      (rawText === imageSrc ||
+        rawText.startsWith('data:image/') ||
+        rawText === '[shared a photo]' ||
+        rawText === 'Shared photo' ||
+        rawText === '[photo]')) ||
+    (audioSrc && (rawText === audioSrc || rawText.startsWith('data:audio/') || rawText === '[sent audio]'))
       ? ''
       : rawText;
 
@@ -158,7 +163,8 @@ export function MessageBubble({
               <img
                 src={resolveMediaUrl(imageSrc)}
                 alt="Shared photo"
-                loading="lazy"
+                loading="eager"
+                decoding="async"
                 onClick={() => {
                   const fullUrl = resolveMediaUrl(imageSrc);
                   if (onImageClick) onImageClick(fullUrl);

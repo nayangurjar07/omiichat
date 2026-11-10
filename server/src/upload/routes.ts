@@ -1,6 +1,7 @@
 // server/src/upload/routes.ts
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
+import path from 'path';
 import { CloudStorageService } from '../storage/CloudStorageService';
 
 const router = Router();
@@ -91,8 +92,49 @@ const handleUpload = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+export const handleGetMedia = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const rawKey = Array.isArray(req.params.key) ? req.params.key[0] : req.params.key;
+    if (!rawKey || typeof rawKey !== 'string') {
+      res.status(400).json({ error: 'Missing media key' });
+      return;
+    }
+    const key = path.basename(rawKey);
+    const media = await storage.getMediaStream(key);
+    if (!media) {
+      res.status(404).json({ error: 'Media not found' });
+      return;
+    }
+
+    res.setHeader('Content-Type', media.contentType || 'image/jpeg');
+    if (media.contentLength) {
+      res.setHeader('Content-Length', media.contentLength);
+    }
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+    if (media.stream) {
+      media.stream.pipe(res);
+    } else if (media.buffer) {
+      res.send(media.buffer);
+    } else if (media.filePath) {
+      res.sendFile(media.filePath);
+    } else if (media.redirectUrl) {
+      res.redirect(media.redirectUrl);
+    } else {
+      res.status(404).json({ error: 'Media unavailable' });
+    }
+  } catch (err) {
+    console.error('[media] Error serving media:', err);
+    res.status(404).json({ error: 'Failed to retrieve media' });
+  }
+};
+
 router.post('/upload', upload.any(), handleUpload);
 router.post('/', upload.any(), handleUpload);
+router.get('/media/:key', handleGetMedia);
+router.get('/uploads/:key', handleGetMedia);
 
 export const uploadRoutes = router;
 export default router;

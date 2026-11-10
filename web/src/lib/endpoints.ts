@@ -73,9 +73,27 @@ export const SOCKET_URL = '';
  */
 export function resolveMediaUrl(pathOrUrl?: string | null): string {
   if (!pathOrUrl) return '';
-  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://') || pathOrUrl.startsWith('blob:')) {
+
+  // Intercept private Neon / Antideploy S3 URLs and rewrite to authenticated backend streaming proxy
+  if (pathOrUrl.includes('storage.c-1.ap-southeast-1.aws.neon.tech') || pathOrUrl.includes('/app.files/')) {
+    const key = pathOrUrl.split('/app.files/').pop()?.split('?')[0] || pathOrUrl.split('/').pop()?.split('?')[0];
+    if (key) {
+      const base = getApiBase();
+      return `${base}/api/media/${key}`;
+    }
+  }
+
+  if (
+    pathOrUrl.startsWith('data:') ||
+    pathOrUrl.startsWith('blob:')
+  ) {
     return pathOrUrl;
   }
+
+  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
+    return pathOrUrl;
+  }
+
   const base = getApiBase();
   const cleanPath = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
   return `${base}${cleanPath}`;

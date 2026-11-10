@@ -1,6 +1,8 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import fs from 'fs';
 import { IStorageService, UploadResult } from './types';
 import { LocalStorageService } from './LocalStorageService';
 import { logger } from '../utils/logger';
@@ -98,7 +100,8 @@ export class CloudStorageService implements IStorageService {
           })
         );
 
-        const url = this.formatS3Url(key);
+        // Private S3 bucket (Antideploy/Neon): serve via internal streaming proxy
+        const url = `/api/media/${key}`;
         return {
           url,
           key,
@@ -205,13 +208,74 @@ export class CloudStorageService implements IStorageService {
 
   getUrl(key: string): string {
     if (this.activeProvider === 's3' && this.s3Bucket) {
-      return this.formatS3Url(key);
+      return `/api/media/${key}`;
     }
     if (this.activeProvider === 'supabase' && this.supabase) {
       const { data } = this.supabase.storage.from(this.supabaseBucket).getPublicUrl(key);
       return data.publicUrl;
     }
     return this.localFallback.getUrl(key);
+  }
+
+  async getMediaStream(key: string): Promise<{
+    stream?: any;
+    buffer?: Buffer;
+    filePath?: string;
+    redirectUrl?: string;
+    contentType?: string;
+    contentLength?: number;
+  } | null> {
+    const cleanKey = path.basename(key);
+    const mime = this.getMimeFromExtension(cleanKey);
+
+    // 1. If S3 active, fetch via GetObjectCommand
+    if (this.activeProvider === 's3' && this.s3Client && this.s3Bucket) {
+      try {
+        const response = await this.s3Client.send(
+          new GetObjectCommand({
+            Bucket: this.s3Bucket,
+            Key: cleanKey,
+          })
+        );
+        if (response.Body) {
+          return {
+            stream: response.Body as any,
+            contentType: response.ContentType || mime,
+            contentLength: response.ContentLength,
+          };
+        }
+      } catch (err: any) {
+        logger.warn(`S3 getObject failed for key "${cleanKey}": ${err?.message || err}`);
+      }
+    }
+
+    // 2. Check local fallback file
+    const localDir = this.localFallback.getUploadDir();
+    const localPath = path.join(localDir, cleanKey);
+    if (fs.existsSync(localPath)) {
+      return {
+        filePath: localPath,
+        contentType: mime,
+      };
+    }
+
+    // 3. Supabase provider fallback
+    if (this.activeProvider === 'supabase' && this.supabase) {
+      try {
+        const { data, error } = await this.supabase.storage.from(this.supabaseBucket).download(cleanKey);
+        if (!error && data) {
+          const arrayBuffer = await data.arrayBuffer();
+          return {
+            buffer: Buffer.from(arrayBuffer),
+            contentType: data.type || mime,
+          };
+        }
+      } catch (err: any) {
+        logger.warn(`Supabase download failed for key "${cleanKey}": ${err?.message || err}`);
+      }
+    }
+
+    return null;
   }
 
   getUploadDir(): string {
@@ -228,6 +292,33 @@ export class CloudStorageService implements IStorageService {
       return `${endpoint}/${this.s3Bucket}/${key}`;
     }
     return `https://${this.s3Bucket}.s3.${this.s3Region}.amazonaws.com/${key}`;
+  }
+
+  private getMimeFromExtension(filename: string): string {
+    const ext = path.extname(filename).toLowerCase();
+    switch (ext) {
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.png':
+        return 'image/png';
+      case '.webp':
+        return 'image/webp';
+      case '.gif':
+        return 'image/gif';
+      case '.webm':
+        return 'audio/webm';
+      case '.ogg':
+        return 'audio/ogg';
+      case '.wav':
+        return 'audio/wav';
+      case '.mp3':
+        return 'audio/mpeg';
+      case '.m4a':
+        return 'audio/mp4';
+      default:
+        return 'application/octet-stream';
+    }
   }
 
   private getSafeExtension(mimeType: string): string {
