@@ -148,9 +148,22 @@ export function useSocket() {
       text?: string;
       mediaUrl?: string;
       mediaType?: 'image' | 'audio';
+      imageUrl?: string;
+      audioUrl?: string;
       timestamp: number;
     }) => {
       const isSelf = data.senderId === sessionIdRef.current || (!!socket.id && data.senderId === socket.id);
+      const resolvedMediaUrl = data.mediaUrl || data.imageUrl || data.audioUrl;
+      const resolvedMediaType =
+        data.mediaType ||
+        (data.imageUrl ? 'image' : undefined) ||
+        (data.audioUrl ? 'audio' : undefined) ||
+        (resolvedMediaUrl
+          ? resolvedMediaUrl.startsWith('data:audio') || resolvedMediaUrl.includes('/audio')
+            ? 'audio'
+            : 'image'
+          : undefined);
+
       setMessages((prev) => [
         ...prev,
         {
@@ -158,8 +171,10 @@ export function useSocket() {
           senderId: data.senderId,
           senderNick: data.senderNick,
           text: data.text,
-          mediaUrl: data.mediaUrl,
-          mediaType: data.mediaType,
+          mediaUrl: resolvedMediaUrl,
+          mediaType: resolvedMediaType,
+          imageUrl: resolvedMediaType === 'image' ? resolvedMediaUrl : undefined,
+          audioUrl: resolvedMediaType === 'audio' ? resolvedMediaUrl : undefined,
           timestamp: data.timestamp,
           isSelf,
         },
@@ -286,7 +301,26 @@ export function useSocket() {
     };
 
     const onRoomMessage = (msg: RoomMessage) => {
-      setRoomMessages((prev) => [...prev, msg]);
+      const resolvedMediaUrl = msg.mediaUrl || msg.imageUrl || msg.audioUrl;
+      const resolvedMediaType =
+        msg.mediaType ||
+        (msg.imageUrl ? 'image' : undefined) ||
+        (msg.audioUrl ? 'audio' : undefined) ||
+        (resolvedMediaUrl
+          ? resolvedMediaUrl.startsWith('data:audio') || resolvedMediaUrl.includes('/audio')
+            ? 'audio'
+            : 'image'
+          : undefined);
+
+      const normalizedMsg: RoomMessage = {
+        ...msg,
+        mediaUrl: resolvedMediaUrl,
+        mediaType: resolvedMediaType,
+        imageUrl: resolvedMediaType === 'image' ? resolvedMediaUrl : undefined,
+        audioUrl: resolvedMediaType === 'audio' ? resolvedMediaUrl : undefined,
+      };
+
+      setRoomMessages((prev) => [...prev, normalizedMsg]);
       if (msg.senderId !== sessionIdRef.current && (!socket.id || msg.senderId !== socket.id)) {
         sounds.playMessagePop();
       }
@@ -621,7 +655,14 @@ export function useSocket() {
 
   const sendMessage = useCallback((text?: string, mediaUrl?: string, mediaType?: 'image' | 'audio') => {
     const socket = getSocket();
-    socket.emit(SOCKET_EVENTS.SEND_MESSAGE, { text, mediaUrl, mediaType });
+    const inferredType =
+      mediaType ||
+      (mediaUrl
+        ? mediaUrl.startsWith('data:audio') || mediaUrl.includes('/audio') || /\.(webm|ogg|wav|mp3|m4a)(\?.*)?$/i.test(mediaUrl)
+          ? 'audio'
+          : 'image'
+        : undefined);
+    socket.emit(SOCKET_EVENTS.SEND_MESSAGE, { text, mediaUrl, mediaType: inferredType });
   }, []);
 
   const sendTyping = useCallback((isTyping: boolean) => {
@@ -741,11 +782,19 @@ export function useSocket() {
       const cleanText = (text || '').trim();
       if (!cleanText && !mediaUrl) return;
 
+      const inferredType =
+        mediaType ||
+        (mediaUrl
+          ? mediaUrl.startsWith('data:audio') || mediaUrl.includes('/audio') || /\.(webm|ogg|wav|mp3|m4a)(\?.*)?$/i.test(mediaUrl)
+            ? 'audio'
+            : 'image'
+          : undefined);
+
       socket.emit(SOCKET_EVENTS.ROOM_SEND_MESSAGE, {
         roomId: currentRoom.id,
         text: cleanText,
         mediaUrl,
-        mediaType,
+        mediaType: inferredType,
       });
     },
     [currentRoom]

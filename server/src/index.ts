@@ -141,6 +141,44 @@ async function bootstrap() {
       next();
     });
 
+    // Handle Next.js App Router RSC payload prefetch requests (e.g. /chat/__next.chat.__PAGE__.txt)
+    app.get('*', (req, res, next) => {
+      if (req.path.endsWith('.txt')) {
+        const cleanReq = req.path.replace(/^\//, '');
+        // 1. Direct file match
+        const directFile = path.join(publicDir, cleanReq);
+        if (fs.existsSync(directFile) && fs.statSync(directFile).isFile()) {
+          res.setHeader('Content-Type', 'text/x-component; charset=utf-8');
+          return res.sendFile(directFile);
+        }
+        // 2. Map .__PAGE__.txt to /__PAGE__.txt
+        if (req.path.includes('.__PAGE__.txt')) {
+          const mappedPath = cleanReq.replace(/\.__PAGE__\.txt$/, '/__PAGE__.txt');
+          const mappedFile = path.join(publicDir, mappedPath);
+          if (fs.existsSync(mappedFile) && fs.statSync(mappedFile).isFile()) {
+            res.setHeader('Content-Type', 'text/x-component; charset=utf-8');
+            return res.sendFile(mappedFile);
+          }
+        }
+        // 3. Fallback to <segment>.txt or <segment>/__next._full.txt
+        const segments = cleanReq.split('/').filter(Boolean);
+        if (segments.length > 0) {
+          const topSegment = segments[0];
+          const segmentTxt = path.join(publicDir, `${topSegment}.txt`);
+          if (fs.existsSync(segmentTxt) && fs.statSync(segmentTxt).isFile()) {
+            res.setHeader('Content-Type', 'text/x-component; charset=utf-8');
+            return res.sendFile(segmentTxt);
+          }
+          const fullTxt = path.join(publicDir, topSegment, '__next._full.txt');
+          if (fs.existsSync(fullTxt) && fs.statSync(fullTxt).isFile()) {
+            res.setHeader('Content-Type', 'text/x-component; charset=utf-8');
+            return res.sendFile(fullTxt);
+          }
+        }
+      }
+      next();
+    });
+
     app.get('*', (req, res) => {
       // Don't serve HTML fallback for missing static assets or API routes
       if (

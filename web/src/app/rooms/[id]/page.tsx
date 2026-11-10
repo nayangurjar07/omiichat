@@ -94,7 +94,14 @@ export default function RoomChatPage({ params }: RoomPageProps) {
   }, []);
 
   const handleSendMessage = (text?: string, mediaUrl?: string, mediaType?: 'image' | 'audio') => {
-    sendRoomMessage(text, mediaUrl, mediaType);
+    const inferredType =
+      mediaType ||
+      (mediaUrl
+        ? mediaUrl.startsWith('data:audio') || mediaUrl.includes('/audio') || /\.(webm|ogg|wav|mp3|m4a)(\?.*)?$/i.test(mediaUrl)
+          ? 'audio'
+          : 'image'
+        : undefined);
+    sendRoomMessage(text, mediaUrl, inferredType);
   };
 
   const handleReportMessage = (msg: RoomMessage) => {
@@ -294,6 +301,7 @@ export default function RoomChatPage({ params }: RoomPageProps) {
           <div className="shrink-0">
             <ChatInput
               onSendMessage={handleSendMessage}
+              onSendImage={(url) => handleSendMessage('', url, 'image')}
               onTyping={sendRoomTyping}
               disabled={isRoomMuted}
               placeholder={

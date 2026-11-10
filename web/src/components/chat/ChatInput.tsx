@@ -2,10 +2,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { getApiBase } from '@/lib/endpoints';
 
 export interface ChatInputProps {
-  onSendMessage?: (text: string, imageUrl?: string) => void;
-  onSend?: (text: string, imageUrl?: string) => void;
+  onSendMessage?: (text: string, imageUrl?: string, mediaType?: 'image' | 'audio') => void;
+  onSend?: (text: string, imageUrl?: string, mediaType?: 'image' | 'audio') => void;
   onSendImage?: (imageUrl: string) => void;
   onSendVoice?: (audioUrl: string, duration?: number) => void;
   onSkip?: () => void;
@@ -14,6 +15,7 @@ export interface ChatInputProps {
   disabled?: boolean;
   isConnected?: boolean;
   placeholder?: string;
+  isSkipConfirming?: boolean;
   [key: string]: any;
 }
 
@@ -60,6 +62,7 @@ export function ChatInput(props: ChatInputProps) {
     disabled = false,
     isConnected = true,
     placeholder = 'Type a message or paste a photo...',
+    isSkipConfirming = false,
   } = props;
 
   const [text, setText] = useState('');
@@ -74,6 +77,7 @@ export function ChatInput(props: ChatInputProps) {
   const skipTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const isChatDisabled = disabled || !isConnected;
+  const isArmed = isSkipConfirming || skipArmed;
 
   useEffect(() => {
     return () => {
@@ -118,7 +122,10 @@ export function ChatInput(props: ChatInputProps) {
       formData.append('file', blob, 'photo.jpg');
       formData.append('image', blob, 'photo.jpg');
 
-      const res = await fetch('/api/upload?type=image', {
+      const apiBase = getApiBase();
+      const endpoint = apiBase ? `${apiBase}/api/upload?type=image` : '/api/upload?type=image';
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         body: formData,
       });
@@ -128,21 +135,22 @@ export function ChatInput(props: ChatInputProps) {
         if (data?.url) return data.url;
         if (data?.imageUrl) return data.imageUrl;
       }
-    } catch {
-      // Fallback to compressed base64 dataUrl so photo still sends even if storage is offline
+    } catch (err) {
+      console.warn('[ChatInput] Upload to server failed, using compressed dataUrl:', err);
     }
+    // Always fall back to dataUrl so photo sends even if storage is offline or unreachable
     return dataUrl;
   };
 
   const dispatchMessage = (msgText: string, imgUrl?: string) => {
+    const mediaType = imgUrl ? 'image' : undefined;
     if (imgUrl && onSendImage && !msgText.trim()) {
       onSendImage(imgUrl);
-      return;
     }
     if (onSendMessage) {
-      onSendMessage(msgText, imgUrl);
+      onSendMessage(msgText, imgUrl, mediaType);
     } else if (onSend) {
-      onSend(msgText, imgUrl);
+      onSend(msgText, imgUrl, mediaType);
     }
   };
 
@@ -253,12 +261,12 @@ export function ChatInput(props: ChatInputProps) {
             type="button"
             onClick={handleSkipClick}
             className={`h-11 px-3.5 rounded-xl font-semibold text-xs sm:text-sm shrink-0 transition-all active:scale-95 border ${
-              skipArmed
+              isArmed
                 ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20'
                 : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-indigo-500/40'
             }`}
           >
-            {skipArmed ? 'Sure? (Esc)' : 'Skip'}
+            {isArmed ? 'Sure? (Esc)' : 'Skip'}
           </button>
         )}
 

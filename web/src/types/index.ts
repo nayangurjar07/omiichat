@@ -12,6 +12,8 @@ export interface ChatMessage {
   text?: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'audio';
+  imageUrl?: string;
+  audioUrl?: string;
   timestamp: number;
   isSelf: boolean;
   isSystem?: boolean;
@@ -79,6 +81,8 @@ export interface RoomMessage {
   text?: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'audio';
+  imageUrl?: string;
+  audioUrl?: string;
   timestamp: number;
   isSystem?: boolean;
 }

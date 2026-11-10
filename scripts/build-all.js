@@ -19,7 +19,29 @@ if (fs.existsSync(webOut)) {
     fs.rmSync(serverPublic, { recursive: true, force: true });
   }
   fs.cpSync(webOut, serverPublic, { recursive: true, force: true });
-  console.log('Static web application assets copied successfully.');
+
+  // Sync Next.js App Router RSC payload aliases (e.g. /chat/__next.chat.__PAGE__.txt)
+  function syncRscAliases(dir) {
+    if (!fs.existsSync(dir)) return;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        syncRscAliases(full);
+      } else if (entry.name === '__PAGE__.txt') {
+        const parentDir = path.basename(dir);
+        const grandParentDir = path.dirname(dir);
+        const aliasPath = path.join(grandParentDir, parentDir + '.__PAGE__.txt');
+        try {
+          fs.copyFileSync(full, aliasPath);
+        } catch (e) {
+          console.warn('Failed to alias RSC file:', aliasPath, e);
+        }
+      }
+    }
+  }
+  syncRscAliases(serverPublic);
+  console.log('Static web application assets and RSC aliases copied successfully.');
 } else {
   console.warn('Warning: web/out directory not found.');
 }

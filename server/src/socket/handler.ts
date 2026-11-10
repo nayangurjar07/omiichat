@@ -39,6 +39,8 @@ export interface MessagePayload {
   text?: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'audio';
+  imageUrl?: string;
+  audioUrl?: string;
   timestamp: number;
 }
 
@@ -698,7 +700,13 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
 
         const rawText = typeof data.text === 'string' ? data.text.trim() : '';
         const mediaUrl = typeof data.mediaUrl === 'string' ? data.mediaUrl.trim() : undefined;
-        const mediaType = data.mediaType === 'image' || data.mediaType === 'audio' ? data.mediaType : undefined;
+        let mediaType = data.mediaType === 'image' || data.mediaType === 'audio' ? data.mediaType : undefined;
+        if (mediaUrl && !mediaType) {
+          mediaType =
+            mediaUrl.startsWith('data:audio/') || mediaUrl.includes('/audio/') || /\.(webm|ogg|wav|mp3|m4a)(\?.*)?$/i.test(mediaUrl)
+              ? 'audio'
+              : 'image';
+        }
 
         if (!rawText && !mediaUrl) {
           socket.emit(EVENTS.ERROR, { message: 'Message cannot be empty.' });
@@ -734,6 +742,8 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
           text: cleanText,
           mediaUrl,
           mediaType,
+          imageUrl: mediaType === 'image' ? mediaUrl : undefined,
+          audioUrl: mediaType === 'audio' ? mediaUrl : undefined,
           timestamp,
         };
 
@@ -754,7 +764,12 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
         // Check if chatting with a server-side bot
         const botSession = activeBotSessions.get(socket.id);
         if (botSession) {
-          handleBotMessageResponse(io, socket, botSession, cleanText || '');
+          handleBotMessageResponse(
+            io,
+            socket,
+            botSession,
+            cleanText || (mediaType === 'image' ? '[shared a photo]' : '[sent audio]')
+          );
         }
       } catch (err) {
         logger.error('Error in send_message', err);
@@ -1147,7 +1162,13 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
 
           const rawText = typeof data.text === 'string' ? data.text.trim() : '';
           const mediaUrl = typeof data.mediaUrl === 'string' ? data.mediaUrl.trim() : undefined;
-          const mediaType = data.mediaType === 'image' || data.mediaType === 'audio' ? data.mediaType : undefined;
+          let mediaType = data.mediaType === 'image' || data.mediaType === 'audio' ? data.mediaType : undefined;
+          if (mediaUrl && !mediaType) {
+            mediaType =
+              mediaUrl.startsWith('data:audio/') || mediaUrl.includes('/audio/') || /\.(webm|ogg|wav|mp3|m4a)(\?.*)?$/i.test(mediaUrl)
+                ? 'audio'
+                : 'image';
+          }
 
           if (!rawText && !mediaUrl) return;
 
@@ -1178,6 +1199,8 @@ export function setupSocketHandlers(io: Server, queue: IMatchingQueue): void {
             text: cleanText,
             mediaUrl,
             mediaType,
+            imageUrl: mediaType === 'image' ? mediaUrl : undefined,
+            audioUrl: mediaType === 'audio' ? mediaUrl : undefined,
             timestamp,
           };
 

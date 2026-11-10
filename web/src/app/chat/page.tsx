@@ -253,7 +253,14 @@ function ChatView() {
 
 
   const handleSendMessage = (text?: string, mediaUrl?: string, mediaType?: 'image' | 'audio') => {
-    sendMessage(text, mediaUrl, mediaType);
+    const inferredType =
+      mediaType ||
+      (mediaUrl
+        ? mediaUrl.startsWith('data:audio') || mediaUrl.includes('/audio') || /\.(webm|ogg|wav|mp3|m4a)(\?.*)?$/i.test(mediaUrl)
+          ? 'audio'
+          : 'image'
+        : undefined);
+    sendMessage(text, mediaUrl, inferredType);
   };
 
   const handleSendTyping = (isTyping: boolean) => {
@@ -561,6 +568,7 @@ function ChatView() {
         <div className="shrink-0">
           <ChatInput
             onSendMessage={handleSendMessage}
+            onSendImage={(url) => handleSendMessage('', url, 'image')}
             onTyping={handleSendTyping}
             onSkip={initiateSkip}
             isSkipConfirming={skipPendingConfirmation}
