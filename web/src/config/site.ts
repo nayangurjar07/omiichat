@@ -5,12 +5,12 @@ import { API_BASE, SOCKET_URL } from '@/lib/endpoints';
  * Every place that displays the product name, tagline, description, or domain reads from here.
  */
 export const siteConfig = {
-  siteName: 'Omii',
-  name: 'Omii',
-  fullTitle: 'Omii: Free Stranger Chat',
-  tagline: 'Talk to strangers. Make connections.',
+  siteName: 'OmiiChat',
+  name: 'OmiiChat',
+  fullTitle: 'OmiiChat | Free Omegle Alternative & Talk to Strangers Online',
+  tagline: 'Free Omegle Alternative: Talk to Strangers Instantly',
   description:
-    'Free anonymous 1-to-1 stranger chat. No sign-up needed. Talk to random people worldwide with interest matching. Safe, fast, and private.',
+    'Connect with people worldwide on OmiiChat, the ultimate free Omegle alternative. Talk to strangers via random text and video chat instantly with no sign-up.',
   domain: process.env.NEXT_PUBLIC_APP_URL || 'https://omiichat.antideploy.app',
   url: process.env.NEXT_PUBLIC_APP_URL || 'https://omiichat.antideploy.app',
   apiBase: API_BASE,

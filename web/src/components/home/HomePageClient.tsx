@@ -12,7 +12,22 @@ import {
   getStoredInterests,
 } from '@/lib/session';
 import { useSocket } from '@/hooks/useSocket';
-import { Dice5, X, Shield, ArrowRight, Zap, Radio, KeyRound } from 'lucide-react';
+import {
+  Dice5,
+  X,
+  Shield,
+  ArrowRight,
+  Zap,
+  Radio,
+  KeyRound,
+  ChevronDown,
+  MessageSquare,
+  Users,
+  Lock,
+  Globe,
+  Sparkles,
+  HelpCircle,
+} from 'lucide-react';
 
 const RANDOM_NICKNAMES = [
   'Cedar',
@@ -142,9 +157,13 @@ export function HomePageClient() {
               <span className="text-zinc-500">Zero logs &bull; 1-to-1</span>
             </div>
 
-            <h1 className="font-mono text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            <div
+              role="heading"
+              aria-level={2}
+              className="font-mono text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight"
+            >
               Talk to someone new.
-            </h1>
+            </div>
             <p className="text-sm font-mono text-zinc-400">
               Instant, anonymous 1-on-1 text chat with random strangers. No sign-up required.
             </p>
@@ -340,6 +359,162 @@ export function HomePageClient() {
           </div>
         </div>
       </main>
+
+      {/* Semantic Keyword-Rich Landing & FAQ Section (Below the fold) */}
+      <section className="w-full border-t border-[#27272a] bg-[#0d0d10] text-zinc-300">
+        <div className="max-w-4xl mx-auto px-4 py-16 space-y-16">
+          {/* Main SEO Heading & Introduction */}
+          <div className="space-y-4 text-center sm:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#18181b] border border-[#27272a] text-xs font-mono text-zinc-400">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Next-Generation Anonymous Switchboard</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight font-mono leading-tight">
+              Free Omegle Alternative: Talk to Strangers Instantly on OmiiChat
+            </h1>
+            <p className="text-sm sm:text-base text-zinc-400 leading-relaxed font-sans max-w-3xl">
+              Connect with people worldwide on OmiiChat, the ultimate free Omegle alternative. Talk to strangers via random text and video chat instantly with no sign-up. Whether you are looking to make new friends, practice languages, discuss niche topics, or find an anonymous text chat partner, OmiiChat pairs you 1-on-1 with real people across the globe without registration or personal data collection.
+            </p>
+          </div>
+
+          {/* Features Breakdown */}
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-white font-mono flex items-center gap-2">
+                <Zap className="w-5 h-5 text-indigo-400" />
+                <span>Why OmiiChat Is the Best Free Omegle Alternative</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-zinc-400 font-mono">
+                Engineered for speed, privacy, and zero friction. Here is how we differ from old random chat websites:
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-5 rounded-lg bg-[#141416] border border-[#27272a] space-y-2.5">
+                <div className="flex items-center gap-2 text-white font-mono font-semibold text-sm">
+                  <MessageSquare className="w-4 h-4 text-emerald-400" />
+                  <h3>Instant Random Chat & Interest Tags</h3>
+                </div>
+                <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-sans">
+                  Match with people who share your passions. Add tags like #music, #gaming, #coding, or #anime to find like-minded strangers, or jump into a 100% random chat line in under 4 seconds.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-lg bg-[#141416] border border-[#27272a] space-y-2.5">
+                <div className="flex items-center gap-2 text-white font-mono font-semibold text-sm">
+                  <Lock className="w-4 h-4 text-cyan-400" />
+                  <h3>100% Anonymous Text, Voice & Photos</h3>
+                </div>
+                <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-sans">
+                  Chat freely without ever handing over an email, phone number, or social handle. Share secure voice notes and photos that evaporate the moment your session disconnects.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-lg bg-[#141416] border border-[#27272a] space-y-2.5">
+                <div className="flex items-center gap-2 text-white font-mono font-semibold text-sm">
+                  <Shield className="w-4 h-4 text-rose-400" />
+                  <h3>Safe & Moderated Video Chat Alternative</h3>
+                </div>
+                <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-sans">
+                  Traditional random video chats became notorious for bots and inappropriate content. OmiiChat delivers a respectful, automated-moderated alternative with instant skips and one-click reporting.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-lg bg-[#141416] border border-[#27272a] space-y-2.5">
+                <div className="flex items-center gap-2 text-white font-mono font-semibold text-sm">
+                  <Globe className="w-4 h-4 text-purple-400" />
+                  <h3>Meet New People Online Worldwide</h3>
+                </div>
+                <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-sans">
+                  Expand your worldview by talking with individuals across every continent. Seamless 24-hour reconnect codes ensure accidental disconnects never ruin an incredible conversation.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-lg bg-[#141416] border border-[#27272a] space-y-2.5 md:col-span-2">
+                <div className="flex items-center gap-2 text-white font-mono font-semibold text-sm">
+                  <Users className="w-4 h-4 text-amber-400" />
+                  <h3>No Registration Required & Zero Logs</h3>
+                </div>
+                <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-sans">
+                  Open the site on mobile or desktop and start chatting instantly. No passwords, no profiles, and no message logs are saved on our servers. Your conversations remain strictly private.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Visible FAQ Section */}
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-white font-mono flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-indigo-400" />
+                <span>Frequently Asked Questions</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-zinc-400 font-mono">
+                Everything you need to know about talking to strangers safely on OmiiChat:
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {/* Question 1 */}
+              <details className="group border border-[#27272a] rounded-lg bg-[#141416] p-4 transition-colors">
+                <summary className="flex items-center justify-between cursor-pointer font-mono font-semibold text-sm sm:text-base text-zinc-100 hover:text-white select-none">
+                  <span>Is OmiiChat free to use?</span>
+                  <ChevronDown className="w-4 h-4 text-zinc-400 group-open:rotate-180 transition-transform duration-200 shrink-0 ml-2" />
+                </summary>
+                <div className="mt-3 text-xs sm:text-sm text-zinc-400 leading-relaxed font-sans border-t border-[#222225] pt-3">
+                  Yes, OmiiChat is 100% free with no hidden fees, premium subscriptions, or paywalls. You can talk to strangers, share photos, and send voice notes as long as you want without paying a single cent.
+                </div>
+              </details>
+
+              {/* Question 2 */}
+              <details className="group border border-[#27272a] rounded-lg bg-[#141416] p-4 transition-colors">
+                <summary className="flex items-center justify-between cursor-pointer font-mono font-semibold text-sm sm:text-base text-zinc-100 hover:text-white select-none">
+                  <span>Why is OmiiChat a good alternative to Omegle?</span>
+                  <ChevronDown className="w-4 h-4 text-zinc-400 group-open:rotate-180 transition-transform duration-200 shrink-0 ml-2" />
+                </summary>
+                <div className="mt-3 text-xs sm:text-sm text-zinc-400 leading-relaxed font-sans border-t border-[#222225] pt-3">
+                  Following the shutdown of Omegle, OmiiChat provides a faster, safer, and modern alternative. We eliminate video chat spam bots with interest matching, smart bot fallbacks, photo moderation, two-step disconnect protection, and 24-hour reconnect codes so you can stay in touch safely.
+                </div>
+              </details>
+
+              {/* Question 3 */}
+              <details className="group border border-[#27272a] rounded-lg bg-[#141416] p-4 transition-colors">
+                <summary className="flex items-center justify-between cursor-pointer font-mono font-semibold text-sm sm:text-base text-zinc-100 hover:text-white select-none">
+                  <span>How do I talk to strangers safely on OmiiChat?</span>
+                  <ChevronDown className="w-4 h-4 text-zinc-400 group-open:rotate-180 transition-transform duration-200 shrink-0 ml-2" />
+                </summary>
+                <div className="mt-3 text-xs sm:text-sm text-zinc-400 leading-relaxed font-sans border-t border-[#222225] pt-3">
+                  Your safety and privacy are our highest priority. You never need to share your real name, phone number, or social media handles. OmiiChat features instant skip controls (press Esc or tap Skip twice), proactive keyword filtering, and a one-click Report button that enforces real-time moderation and permanent bans against bad actors.
+                </div>
+              </details>
+
+              {/* Question 4 */}
+              <details className="group border border-[#27272a] rounded-lg bg-[#141416] p-4 transition-colors">
+                <summary className="flex items-center justify-between cursor-pointer font-mono font-semibold text-sm sm:text-base text-zinc-100 hover:text-white select-none">
+                  <span>Do I need to create an account or download an app?</span>
+                  <ChevronDown className="w-4 h-4 text-zinc-400 group-open:rotate-180 transition-transform duration-200 shrink-0 ml-2" />
+                </summary>
+                <div className="mt-3 text-xs sm:text-sm text-zinc-400 leading-relaxed font-sans border-t border-[#222225] pt-3">
+                  No. OmiiChat runs directly in your web browser on mobile phones, tablets, and desktop computers. There is no app to download and zero account sign-up. Just open the website and hit Start Chat to connect immediately.
+                </div>
+              </details>
+            </div>
+          </div>
+
+          {/* Quick Bottom CTA */}
+          <div className="text-center pt-4">
+            <button
+              type="button"
+              onClick={handleStartChat}
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded bg-white hover:bg-zinc-200 text-black font-mono font-bold text-sm tracking-wider uppercase transition-all cursor-pointer shadow-lg active:scale-95"
+            >
+              <Zap className="w-4 h-4 fill-black" />
+              <span>Start Random Chat Now</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </section>
 
       <AgeGateModal
         isOpen={isAgeModalOpen}

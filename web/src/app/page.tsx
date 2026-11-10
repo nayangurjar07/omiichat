@@ -3,36 +3,41 @@ import { siteConfig } from '@/config/site';
 import { HomePageClient } from '@/components/home/HomePageClient';
 
 export const metadata: Metadata = {
-  title: 'Omii: Stranger Chat – Free Random Chat & Talk to Strangers Online (No Sign Up)',
+  title: 'OmiiChat | Free Omegle Alternative & Talk to Strangers Online',
   description:
-    'Instant, free anonymous stranger chat. Connect 1-on-1 on a private switchboard line. Talk to random strangers worldwide with interest matching, voice notes, and zero logs.',
+    'Connect with people worldwide on OmiiChat, the ultimate free Omegle alternative. Talk to strangers via random text and video chat instantly with no sign-up.',
   alternates: {
-    canonical: siteConfig.url,
+    canonical: 'https://omiichat.antideploy.app/',
   },
   keywords: [
-    'stranger chat',
-    'talk to strangers',
-    'random chat',
     'omegle alternative',
-    'talk to strangers online',
-    'chat with strangers free',
-    'anonymous chat',
-    'random text chat',
-    'talk to random people',
+    'talk to strangers',
+    'random video chat',
+    'anonymous text chat',
+    'meet new people online',
+    'omiichat',
+    'free omegle alternative no login mobile',
+    'anonymous text chat with strangers online',
+    'random chat',
+    'chat with strangers',
   ],
+  robots: {
+    index: true,
+    follow: true,
+  },
   openGraph: {
-    title: 'Omii: Stranger Chat – Free Random Chat & Talk to Strangers Online',
+    title: 'OmiiChat | Free Omegle Alternative & Talk to Strangers Online',
     description:
-      'Instant, free anonymous stranger chat. Connect 1-on-1 on a private switchboard line with interest matching and zero logging.',
-    url: siteConfig.url,
-    siteName: siteConfig.siteName,
+      'Connect with people worldwide on OmiiChat, the ultimate free Omegle alternative. Talk to strangers via random text and video chat instantly with no sign-up.',
+    url: 'https://omiichat.antideploy.app/',
+    siteName: 'OmiiChat',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Omii: Stranger Chat – Free Random Chat & Talk to Strangers Online',
+    title: 'OmiiChat | Free Omegle Alternative & Talk to Strangers Online',
     description:
-      'Instant, free anonymous stranger chat. Connect 1-on-1 on a private switchboard line with interest matching and zero logging.',
+      'Connect with people worldwide on OmiiChat, the ultimate free Omegle alternative. Talk to strangers via random text and video chat instantly with no sign-up.',
   },
 };
 
@@ -42,53 +47,54 @@ export default function HomePage() {
     '@graph': [
       {
         '@type': 'WebApplication',
-        '@id': `${siteConfig.url}/#webapp`,
-        name: 'Omii Stranger Chat',
-        url: siteConfig.url,
-        applicationCategory: 'CommunicationApplication',
+        '@id': 'https://omiichat.antideploy.app/#webapp',
+        name: 'OmiiChat',
+        url: 'https://omiichat.antideploy.app/',
+        applicationCategory: 'SocialNetworkingApplication',
         operatingSystem: 'All',
+        browserRequirements: 'Requires JavaScript. Requires HTML5.',
         offers: {
           '@type': 'Offer',
           price: '0',
           priceCurrency: 'USD',
         },
         description:
-          'Free anonymous stranger chat. Connect 1-on-1 on a private switchboard line. Talk to random strangers worldwide without registration.',
+          'Connect with people worldwide on OmiiChat, the ultimate free Omegle alternative. Talk to strangers via random text and video chat instantly with no sign-up.',
       },
       {
         '@type': 'FAQPage',
-        '@id': `${siteConfig.url}/#faq`,
+        '@id': 'https://omiichat.antideploy.app/#faq',
         mainEntity: [
           {
             '@type': 'Question',
-            name: 'How do I talk to strangers on Omii?',
+            name: 'Is OmiiChat free to use?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Simply enter an optional nickname and interests, then click Start Chatting. You will be connected instantly to a random stranger on a private 1-to-1 line.',
+              text: 'Yes, OmiiChat is 100% free with no hidden fees, premium subscriptions, or registration required. You can start chatting instantly.',
             },
           },
           {
             '@type': 'Question',
-            name: 'Is Omii stranger chat completely free?',
+            name: 'Why is OmiiChat a good alternative to Omegle?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Yes, Omii is 100% free with no sign-up, subscriptions, or credit card required.',
+              text: 'OmiiChat offers high-speed anonymous matchmaking, topic/interest tags, photo sharing, voice notes, and real-time moderation to keep conversations clean and safe, making it a modern, reliable Omegle alternative.',
             },
           },
           {
             '@type': 'Question',
-            name: 'Can I reconnect if my stranger chat disconnects?',
+            name: 'How do I talk to strangers safely on OmiiChat?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Yes. Omii features unique 6-digit Reconnect Codes. When a chat ends, both parties can trade a code to reconnect without exchanging phone numbers or social media.',
+              text: 'You never have to reveal your real identity, email, or phone number. OmiiChat includes instant skip/disconnect buttons, proactive keyword filters, client-side moderation, and a one-click reporting system to block abusive users.',
             },
           },
           {
             '@type': 'Question',
-            name: 'Are my chats logged or stored?',
+            name: 'Do I need to create an account or download an app?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'No. All conversations and attachments are purely ephemeral and stream directly in memory. Once the line disconnects, messages are instantly deleted.',
+              text: 'No. OmiiChat runs directly in your web browser on mobile and desktop without downloading any app or creating an account.',
             },
           },
         ],

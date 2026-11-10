@@ -1,38 +1,29 @@
-1:"$Sreact.fragment"
-2:"/_next/static/chunks/0umf92h1sb77c.js"
-3:I[39756,["$2"],"default"]
-4:I[37457,["$2"],"default"]
-b:"$Sreact.suspense"
-c:"/_next/static/chunks/37m6nzqjh2jpd.js"
-d:"/_next/static/chunks/3xubdlzqg6cyz.js"
-e:"RoomsDirectoryClient"
-f:I[25269,["$2","$c","$d"],"$e"]
-10:I[97367,["$2"],"OutletBoundary"]
-13:"ViewportBoundary"
-14:I[97367,["$2"],"$13"]
-15:"MetadataBoundary"
-16:I[97367,["$2"],"$15"]
-:HL["/_next/static/chunks/0gf2thlylv0tj.css","style"]
-6:X
-9:X
-9:C
-a:[["children",{"s":"__PAGE__","h":160,"d":{"r":["$","$1","c",{"children":[["$","$b",null,{"fallback":["$","div",null,{"className":"min-h-screen bg-[var(--bg-paper)]"}],"children":["$","$Lf",null,{}]}],[["$","script","script-0",{"src":"/_next/static/chunks/37m6nzqjh2jpd.js","async":true}],["$","script","script-1",{"src":"/_next/static/chunks/3xubdlzqg6cyz.js","async":true}]],["$","$L10",null,{"children":["$","$b",null,{"name":"Next.MetadataOutlet","children":"$@11"}]}]]}],"p":"$@12","v":null,"s":"$6"}}]]
-7:[["children",{"s":"rooms","h":96,"d":{"r":["$","$1","c",{"children":[null,["$","$L3",null,{"parallelRouterKey":"children","template":["$","$L4",null,{}]}]]}],"p":"$@8","v":"$9","s":"$6"},"c":"$Qa"}]]
-0:{"t":{"t":{"s":"","h":80,"d":{"r":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/chunks/0gf2thlylv0tj.css","precedence":"next"}],["$","script","script-0",{"src":"/_next/static/chunks/0umf92h1sb77c.js","async":true}]],["$","html",null,{"lang":"en","suppressHydrationWarning":true,"className":"Dgvnja_variable HhIiTa_variable y36ooG_variable dark","children":[["$","head",null,{"children":[["$","script",null,{"dangerouslySetInnerHTML":{"__html":"\n              (function() {\n                try {\n                  var saved = localStorage.getItem('omii_theme') || localStorage.getItem('theme');\n                  var root = document.documentElement;\n                  if (saved === 'light') {\n                    root.classList.remove('dark');\n                    root.classList.add('light');\n                    root.setAttribute('data-theme', 'light');\n                  } else {\n                    root.classList.remove('light');\n                    root.classList.add('dark');\n                    root.setAttribute('data-theme', 'dark');\n                  }\n                } catch (e) {}\n              })();\n            "}}],["$","script",null,{"type":"application/ld+json","dangerouslySetInnerHTML":{"__html":"{\"@context\":\"https://schema.org\",\"@type\":\"WebApplication\",\"name\":\"OmiiChat\",\"url\":\"https://omiichat.antideploy.com\",\"applicationCategory\":\"SocialNetworkingApplication\",\"operatingSystem\":\"All\",\"offers\":{\"@type\":\"Offer\",\"price\":\"0\",\"priceCurrency\":\"USD\"}}"}}]]}],["$","body",null,{"className":"min-h-[100dvh] bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased selection:bg-indigo-500/30 selection:text-indigo-200 transition-colors duration-200","children":["$","$L3",null,{"parallelRouterKey":"children","template":["$","$L4",null,{}],"notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]]}]}]]}]]}],"p":"$@5","v":null,"s":"$6"},"c":"$Q7"},"h":{"r":["$","$1","h",{"children":[null,["$","$L14",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"}],["$","meta","2",{"name":"theme-color","content":"#09090b","media":"(prefers-color-scheme: dark)"}],["$","meta","3",{"name":"theme-color","content":"#fafafa","media":"(prefers-color-scheme: light)"}]]}],["$","$L16",null,{"children":[["$","div",null,{"hidden":true,"children":["$","$b",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"Rooms – Omii: Stranger Chat"}],["$","meta","1",{"name":"description","content":"Join live topic rooms and regional communities on Omii. Talk about gaming, music, movies, tech, and more."}],["$","link","2",{"rel":"canonical","href":"https://omiichat.antideploy.app/rooms"}],["$","meta","3",{"property":"og:title","content":"Rooms – Omii: Stranger Chat"}],["$","meta","4",{"property":"og:description","content":"Join live topic rooms and regional communities on Omii. Talk about gaming, music, movies, tech, and more."}],["$","meta","5",{"property":"og:url","content":"https://omiichat.antideploy.app/rooms"}],"$L17","$L18","$L19","$L1a","$L1b","$L1c"]}]}],null]}],"$L1d"]}],"p":"$@1e","v":null,"s":"$6"}},"a":"$@1f","u":"$@20","b":"doT1jye47B2TPdy_TeHLh"}
-21:I[27201,["$2"],"IconMark"]
-11:null
-17:["$","meta","6",{"property":"og:site_name","content":"Omii"}]
-18:["$","meta","7",{"name":"twitter:card","content":"summary"}]
-19:["$","meta","8",{"name":"twitter:title","content":"Rooms – Omii: Stranger Chat"}]
-1a:["$","meta","9",{"name":"twitter:description","content":"Join live topic rooms and regional communities on Omii. Talk about gaming, music, movies, tech, and more."}]
-1b:["$","link","10",{"rel":"icon","href":"/favicon.ico?favicon.117ezoe8m31dk.ico","sizes":"48x48","type":"image/x-icon"}]
-1c:["$","$L21","11",{}]
-1d:["$","meta",null,{"name":"next-size-adjust","content":""}]
-6:300
-20:true
-6:C
-1f:0
-8:"$undefined"
-5:"$undefined"
-1e:"$undefined"
-12:"$undefined"
+2:"$Sreact.fragment"
+3:"/_next/static/chunks/0umf92h1sb77c.js"
+4:I[39756,["$3"],"default"]
+5:I[37457,["$3"],"default"]
+a:"$Sreact.suspense"
+b:"/_next/static/chunks/2b_ry7t5mz0oc.js"
+c:"/_next/static/chunks/3xubdlzqg6cyz.js"
+d:"RoomsDirectoryClient"
+e:I[25269,["$3","$b","$c"],"$d"]
+f:I[97367,["$3"],"OutletBoundary"]
+12:"ViewportBoundary"
+13:I[97367,["$3"],"$12"]
+14:"MetadataBoundary"
+15:I[97367,["$3"],"$14"]
+16:I[27201,["$3"],"IconMark"]
+7:X
+7:C
+8:X
+9:[["children",{"s":"__PAGE__","h":160,"d":{"r":["$","$2","c",{"children":[["$","$a",null,{"fallback":["$","div",null,{"className":"min-h-screen bg-[var(--bg-paper)]"}],"children":["$","$Le",null,{}]}],[["$","script","script-0",{"src":"/_next/static/chunks/2b_ry7t5mz0oc.js","async":true}],["$","script","script-1",{"src":"/_next/static/chunks/3xubdlzqg6cyz.js","async":true}]],["$","$Lf",null,{"children":["$","$a",null,{"name":"Next.MetadataOutlet","children":"$@10"}]}]]}],"p":"$@11","v":null,"s":"$8"}}]]
+1:[["children",{"s":"rooms","h":64,"d":{"r":["$","$2","c",{"children":[null,["$","$L4",null,{"parallelRouterKey":"children","template":["$","$L5",null,{}]}]]}],"p":"$@6","v":"$7","s":"$8"},"c":"$Q9"}]]
+0:{"t":{"t":{"s":"","h":16,"c":"$Q1"},"h":{"r":["$","$2","h",{"children":[null,["$","$L13",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"}],["$","meta","2",{"name":"theme-color","content":"#09090b","media":"(prefers-color-scheme: dark)"}],["$","meta","3",{"name":"theme-color","content":"#fafafa","media":"(prefers-color-scheme: light)"}]]}],["$","$L15",null,{"children":[["$","div",null,{"hidden":true,"children":["$","$a",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"Rooms – Omii: Stranger Chat"}],["$","meta","1",{"name":"description","content":"Join live topic rooms and regional communities on OmiiChat. Talk about gaming, music, movies, tech, and more."}],["$","meta","2",{"name":"keywords","content":"omegle alternative,talk to strangers,random video chat,anonymous text chat,meet new people online,omiichat,free omegle alternative no login mobile,anonymous text chat with strangers online,random chat,chat with strangers"}],["$","meta","3",{"name":"robots","content":"index, follow"}],["$","meta","4",{"name":"googlebot","content":"index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1"}],["$","link","5",{"rel":"canonical","href":"https://omiichat.antideploy.app/rooms"}],["$","meta","6",{"name":"google-site-verification","content":"xoehmGRDTQUKHGQ-TnC9ZU8Bf0GN60bZzz541Nw8VHs"}],["$","meta","7",{"property":"og:title","content":"Rooms – Omii: Stranger Chat"}],["$","meta","8",{"property":"og:description","content":"Join live topic rooms and regional communities on OmiiChat. Talk about gaming, music, movies, tech, and more."}],["$","meta","9",{"property":"og:url","content":"https://omiichat.antideploy.app/rooms"}],["$","meta","10",{"property":"og:site_name","content":"OmiiChat"}],["$","meta","11",{"name":"twitter:card","content":"summary_large_image"}],["$","meta","12",{"name":"twitter:title","content":"OmiiChat | Free Omegle Alternative & Talk to Strangers Online"}],["$","meta","13",{"name":"twitter:description","content":"Connect with people worldwide on OmiiChat, the ultimate free Omegle alternative. Talk to strangers via random text and video chat instantly with no sign-up."}],["$","link","14",{"rel":"icon","href":"/favicon.ico?favicon.117ezoe8m31dk.ico","sizes":"48x48","type":"image/x-icon"}],["$","$L16","15",{}]]}]}],null]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"p":"$@17","v":null,"s":"$8"}},"a":"$@18","u":"$@19","b":"69eaUfX_hzpiKWRTgbHhJ"}
+10:null
+19:true
+8:300
+8:C
+18:0
+6:"$undefined"
+17:"$undefined"
+11:"$undefined"

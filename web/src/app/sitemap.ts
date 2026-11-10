@@ -30,7 +30,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return routes.map((route) => ({
     url: `${siteConfig.url}${route}`,
     lastModified: now,
-    changeFrequency: route === '' || route === '/rooms' ? 'hourly' : 'weekly',
+    changeFrequency: route === '' ? 'daily' : route === '/rooms' ? 'hourly' : 'weekly',
     priority:
       route === ''
         ? 1.0
